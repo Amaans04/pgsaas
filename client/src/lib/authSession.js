@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { auth } from './firebase';
 import { setAccessToken, clearAccessToken } from './tokenStorage';
+import { getServerUrl } from './serverUrl';
 
-const baseURL = import.meta.env.VITE_SERVER_URL;
+const baseURL = getServerUrl();
 
 export async function establishSession() {
   const user = auth.currentUser;

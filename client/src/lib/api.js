@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { getAccessToken, clearAccessToken } from './tokenStorage';
 import { refreshAccessToken } from './authSession';
+import { getServerUrl } from './serverUrl';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_URL,
+  baseURL: getServerUrl(),
   withCredentials: true,
 });
 

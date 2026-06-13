@@ -1,5 +1,15 @@
+export function getAllowedOrigin() {
+  const raw = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+  try {
+    const url = new URL(raw);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return raw.replace(/\/+$/, '');
+  }
+}
+
 export function setCorsHeaders(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+  const origin = getAllowedOrigin();
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');

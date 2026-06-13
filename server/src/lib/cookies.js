@@ -13,8 +13,11 @@ function parseCookies(req) {
 }
 
 function baseAttributes() {
-  const attrs = ['HttpOnly', 'Path=/', 'SameSite=Lax'];
-  if (process.env.NODE_ENV === 'production') {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const attrs = ['HttpOnly', 'Path=/'];
+  // Cross-origin client + API on Vercel need SameSite=None (e.g. app.vercel.app → api.vercel.app)
+  attrs.push(isProduction ? 'SameSite=None' : 'SameSite=Lax');
+  if (isProduction) {
     attrs.push('Secure');
   }
   return attrs;

@@ -1,14 +1,24 @@
 /** @type {import('next').NextConfig} */
 const allowedOrigin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
 
+function normalizeOrigin(value) {
+  try {
+    const url = new URL(value);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return value.replace(/\/+$/, '');
+  }
+}
+
 const nextConfig = {
   reactStrictMode: true,
   async headers() {
+    const origin = normalizeOrigin(allowedOrigin);
     return [
       {
         source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: allowedOrigin },
+          { key: 'Access-Control-Allow-Origin', value: origin },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },

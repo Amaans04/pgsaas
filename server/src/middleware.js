@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server';
 
+function getAllowedOrigin() {
+  const raw = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+  try {
+    const url = new URL(raw);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return raw.replace(/\/+$/, '');
+  }
+}
+
 function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': origin,
@@ -17,7 +27,7 @@ const SECURITY_HEADERS = {
 };
 
 export function middleware(request) {
-  const origin = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+  const origin = getAllowedOrigin();
 
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { status: 204, headers: { ...corsHeaders(origin), ...SECURITY_HEADERS } });
