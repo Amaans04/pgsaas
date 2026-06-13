@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     }
 
     if (!isAdminEmail(email, sitePgId)) {
-      return error(res, 'This Google account is not authorized for admin access', 403);
+      return error(res, 'This account is not authorized for admin access', 403);
     }
 
     const db = getFirestore();
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       name = userRecord.displayName;
     }
     if (!name) {
-      return error(res, 'Name not found on your Google account', 400);
+      return error(res, 'Name is required on your account profile', 400);
     }
 
     const now = new Date().toISOString();

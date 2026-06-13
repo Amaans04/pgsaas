@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/api';
-import { establishSession } from '../lib/authSession';
 import { useAuth } from '../hooks/useAuth';
 import { usePGConfig } from '../hooks/usePGConfig';
+import { getAuthHomePath } from '../lib/authRedirect';
 import Navbar from '../components/Navbar';
 
 export default function Onboarding() {
   const { pgId } = useParams();
   const navigate = useNavigate();
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, isOnboarded, loading: authLoading } = useAuth();
   const { config } = usePGConfig();
   const [phone, setPhone] = useState('');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -18,6 +18,20 @@ export default function Onboarding() {
 
   const name = displayName.trim() || user?.displayName || '';
   const email = user?.email || '';
+
+  useEffect(() => {
+    if (!authLoading && isOnboarded) {
+      navigate(getAuthHomePath(profile, pgId), { replace: true });
+    }
+  }, [authLoading, isOnboarded, profile, pgId, navigate]);
+
+  if (authLoading || isOnboarded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +42,7 @@ export default function Onboarding() {
       setLoading(true);
       setError('');
 
-      await establishSession();
+      await refreshProfile();
 
       const { data } = await api.post('/api/auth/onboard', {
         role: 'tenant',

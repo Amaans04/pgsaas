@@ -1,5 +1,5 @@
 /**
- * Admin whitelist — only these Google emails can access the owner panel per PG.
+ * Admin whitelist — only these emails can access the owner panel per PG.
  * Add emails here manually, then restart the server.
  */
 const ADMIN_EMAILS_BY_PG = {

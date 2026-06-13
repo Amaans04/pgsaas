@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// ---------------------------------------------------------------------------
+// Firestore security rules — DEFAULT DENY.
+//
+// Every read/write in this app goes through the Next.js API, which uses the
+// Firebase Admin SDK. The Admin SDK runs with privileged credentials and
+// BYPASSES these rules entirely, so the API keeps working.
+//
+// The web client only uses Firebase Authentication; it never talks to
+// Firestore directly. But the client bundle ships the public Firebase config
+// (apiKey, projectId, ...), which anyone can extract and use to hit the
+// Firestore REST/SDK endpoints. Denying all direct client access here is what
+// stops an attacker from reading/writing users, rentRecords, customPayments,
+// refreshTokens, etc. straight from the database and bypassing our API authz.
+//
+// Deploy with:  firebase deploy --only firestore:rules
+// ---------------------------------------------------------------------------
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

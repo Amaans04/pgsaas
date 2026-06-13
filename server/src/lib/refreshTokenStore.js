@@ -20,10 +20,14 @@ export async function revokeRefreshToken(db, jti) {
 }
 
 export async function revokeAllForUser(db, uid) {
-  const snapshot = await db.collection(COLLECTION).where('uid', '==', uid).where('revoked', '==', false).get();
-  if (snapshot.empty) return;
+  // Single-field query (uid only) + in-memory filter, so we don't depend on a
+  // composite (uid + revoked) Firestore index — matches the index-avoidance
+  // pattern used elsewhere in this codebase.
+  const snapshot = await db.collection(COLLECTION).where('uid', '==', uid).get();
+  const active = snapshot.docs.filter((doc) => doc.data().revoked !== true);
+  if (active.length === 0) return;
 
   const batch = db.batch();
-  snapshot.docs.forEach((doc) => batch.update(doc.ref, { revoked: true }));
+  active.forEach((doc) => batch.update(doc.ref, { revoked: true }));
   await batch.commit();
 }

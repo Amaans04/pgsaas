@@ -1,8 +1,12 @@
 /**
  * Default post-login route based on role and onboarding state.
  */
+function isProfileOnboarded(profile) {
+  return profile?.onboarded === true || Boolean(profile?.role);
+}
+
 export function getAuthHomePath(profile, pgId) {
-  if (!profile?.onboarded) {
+  if (!isProfileOnboarded(profile)) {
     return `/${pgId}/onboarding`;
   }
   if (profile?.isAdmin) {

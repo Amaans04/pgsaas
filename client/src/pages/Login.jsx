@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
-  signInWithPopup,
   signInWithEmailAndPassword,
   sendEmailVerification,
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import api from '../lib/api';
 import { getAuthHomePath } from '../lib/authRedirect';
-import { establishSession } from '../lib/authSession';
+import { startGoogleSignIn, finishGoogleRedirectSignIn } from '../lib/googleAuth';
 import { usePGConfig } from '../hooks/usePGConfig';
 import { useAuth } from '../hooks/useAuth';
 import Navbar from '../components/Navbar';
@@ -24,7 +23,6 @@ import { isEmailNotVerifiedError, mapFirebaseAuthError, mapSessionError } from '
 
 async function completeSignIn(refreshProfile, pgId, navigate) {
   try {
-    await establishSession();
     const profile = await refreshProfile();
     navigate(getAuthHomePath(profile, pgId));
   } catch (sessionErr) {
@@ -58,7 +56,8 @@ export default function Login() {
       setLoading(true);
       setError('');
       setInfo('');
-      await signInWithPopup(auth, googleProvider);
+      const user = await startGoogleSignIn();
+      if (!user) return;
       await completeSignIn(refreshProfile, pgId, navigate);
     } catch (err) {
       setError(mapFirebaseAuthError(err));
@@ -66,6 +65,25 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const user = await finishGoogleRedirectSignIn();
+        if (!user || cancelled) return;
+        setLoading(true);
+        await completeSignIn(refreshProfile, pgId, navigate);
+      } catch (err) {
+        if (!cancelled) setError(mapFirebaseAuthError(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pgId, navigate, refreshProfile]);
 
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
@@ -191,10 +209,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-brand-soft min-h-screen">
       <Navbar />
       <div className="flex min-h-[calc(100vh-57px)] items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+        <div className="animate-fade-up w-full max-w-md rounded-2xl bg-white p-8 shadow-xl ring-1 ring-black/5">
           <h1 className="text-center text-2xl font-bold text-gray-900">
             Welcome to {config?.name || 'PG Platform'}
           </h1>
@@ -278,7 +296,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-primary py-2.5 font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                className="btn-lift w-full rounded-lg bg-primary py-2.5 font-semibold text-white shadow-sm hover:shadow-md disabled:opacity-50"
               >
                 {loading ? 'Signing in...' : 'Sign in with Email'}
               </button>
@@ -345,7 +363,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-primary py-2.5 font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                className="btn-lift w-full rounded-lg bg-primary py-2.5 font-semibold text-white shadow-sm hover:shadow-md disabled:opacity-50"
               >
                 {loading ? 'Creating account...' : 'Create Account'}
               </button>

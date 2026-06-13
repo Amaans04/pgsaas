@@ -38,7 +38,14 @@ export default async function handler(req, res) {
       .update(body)
       .digest('hex');
 
-    if (expectedSignature !== razorpay_signature) {
+    // Constant-time comparison to avoid leaking the signature via timing.
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+    const providedBuf = Buffer.from(String(razorpay_signature), 'utf8');
+    const signatureValid =
+      expectedBuf.length === providedBuf.length &&
+      crypto.timingSafeEqual(expectedBuf, providedBuf);
+
+    if (!signatureValid) {
       return error(res, 'Payment signature verification failed', 400);
     }
 

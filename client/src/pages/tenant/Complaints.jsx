@@ -5,7 +5,7 @@ import Navbar from '../../components/Navbar';
 import FeatureGate from '../../components/FeatureGate';
 import { tenantLinks } from '../../lib/navLinks';
 
-const TYPES = ['cleaning', 'maintenance', 'other'];
+const TYPES = ['maintenance', 'other'];
 
 export default function TenantComplaints() {
   const { pgId } = useParams();

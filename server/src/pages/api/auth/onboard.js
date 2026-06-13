@@ -1,7 +1,9 @@
 import { handleCors } from '../../../lib/cors';
 import { success, error } from '../../../lib/apiResponse';
 import { verifyAuth } from '../../../middleware/verifyAuth';
+import { rateLimit } from '../../../middleware/rateLimit';
 import { getAuth, getFirestore } from '../../../lib/firebaseAdmin';
+import { validatePhone, validateName } from '../../../lib/passwordPolicy';
 
 export default async function handler(req, res) {
   try {
@@ -10,6 +12,8 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') {
       return error(res, 'Method not allowed', 405);
     }
+
+    rateLimit(req);
 
     const decoded = await verifyAuth(req);
     const uid = decoded.uid;
@@ -26,8 +30,9 @@ export default async function handler(req, res) {
       return error(res, 'Only tenant signup is allowed through this endpoint', 403);
     }
 
-    if (!phone) {
-      return error(res, 'Phone number is required', 400);
+    const phoneError = validatePhone(phone);
+    if (phoneError) {
+      return error(res, phoneError, 400);
     }
 
     let name = decoded.name || bodyName;
@@ -36,8 +41,9 @@ export default async function handler(req, res) {
     if (!name) name = userRecord.displayName;
     photoURL = userRecord.photoURL || null;
 
-    if (!name || String(name).trim().length < 2) {
-      return error(res, 'Name is required (at least 2 characters)', 400);
+    const nameError = validateName(name);
+    if (nameError) {
+      return error(res, nameError, 400);
     }
     name = String(name).trim();
 

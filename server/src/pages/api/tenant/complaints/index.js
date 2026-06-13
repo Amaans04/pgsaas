@@ -24,7 +24,9 @@ export default async function handler(req, res) {
       .where('pgId', '==', pgId)
       .get();
 
-    const complaints = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const complaints = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .filter((c) => c.type !== 'cleaning');
     complaints.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return success(res, complaints);

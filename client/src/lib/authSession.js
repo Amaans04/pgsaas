@@ -5,27 +5,42 @@ import { getServerUrl } from './serverUrl';
 
 const baseURL = getServerUrl();
 
+/** Dedupe concurrent session exchanges (login fires onAuthStateChanged + completeSignIn). */
+let sessionPromise = null;
+
 export async function establishSession() {
-  const user = auth.currentUser;
-  if (!user) {
-    clearAccessToken();
-    throw new Error('Not signed in');
+  if (sessionPromise) {
+    return sessionPromise;
   }
 
-  const firebaseToken = await user.getIdToken(true);
-  const { data } = await axios.post(
-    `${baseURL}/api/auth/session`,
-    {},
-    { headers: { Authorization: `Bearer ${firebaseToken}` }, withCredentials: true }
-  );
+  sessionPromise = (async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      clearAccessToken();
+      throw new Error('Not signed in');
+    }
 
-  if (!data.success) {
-    clearAccessToken();
-    throw new Error(data.error || 'Failed to create session');
+    const firebaseToken = await user.getIdToken(true);
+    const { data } = await axios.post(
+      `${baseURL}/api/auth/session`,
+      {},
+      { headers: { Authorization: `Bearer ${firebaseToken}` }, withCredentials: true }
+    );
+
+    if (!data.success) {
+      clearAccessToken();
+      throw new Error(data.error || 'Failed to create session');
+    }
+
+    setAccessToken(data.data.accessToken);
+    return data.data;
+  })();
+
+  try {
+    return await sessionPromise;
+  } finally {
+    sessionPromise = null;
   }
-
-  setAccessToken(data.data.accessToken);
-  return data.data;
 }
 
 export async function refreshAccessToken() {

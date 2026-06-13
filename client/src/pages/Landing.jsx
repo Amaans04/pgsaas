@@ -30,28 +30,38 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar links={[{ to: `/${pgId}/login`, label: 'Login' }]} />
 
-      <section className="bg-secondary px-4 py-20 sm:px-6">
-        <div className="mx-auto max-w-4xl text-center">
-          <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl">{config.name}</h1>
-          <p className="mt-4 text-xl text-gray-600">{config.tagline}</p>
-          <p className="mt-2 text-gray-500">{config.address}</p>
+      <section className="bg-brand-soft relative overflow-hidden px-4 py-24 sm:px-6 sm:py-28">
+        <div className="animate-fade-up mx-auto max-w-3xl text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary shadow-sm backdrop-blur">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            Now accepting residents
+          </span>
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">
+            {config.name}
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-lg text-gray-600 sm:text-xl">{config.tagline}</p>
+          <p className="mt-3 text-sm text-gray-500">{config.address}</p>
           <Link
             to={`/${pgId}/login`}
-            className="mt-8 inline-block rounded-lg bg-primary px-8 py-3 font-semibold text-white shadow-lg hover:opacity-90"
+            className="btn-lift mt-9 inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-semibold text-white shadow-lg hover:shadow-2xl"
           >
             Get Started
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
       </section>
 
       <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-        <h2 className="mb-8 text-center text-2xl font-bold text-gray-900">Amenities</h2>
+        <h2 className="mb-8 text-center text-2xl font-bold tracking-tight text-gray-900">Amenities</h2>
         <div className="flex flex-wrap justify-center gap-3">
           {config.amenities?.map((amenity) => (
-            <span key={amenity} className="rounded-full bg-secondary px-4 py-2 text-sm font-medium text-primary">
+            <span
+              key={amenity}
+              className="rounded-full border border-black/5 bg-secondary px-4 py-2 text-sm font-medium text-primary shadow-sm"
+            >
               {amenity}
             </span>
           ))}
@@ -60,11 +70,17 @@ export default function Landing() {
 
       <section className="bg-white px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-4xl">
-          <h2 className="mb-8 text-center text-2xl font-bold text-gray-900">Room Types</h2>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <h2 className="mb-8 text-center text-2xl font-bold tracking-tight text-gray-900">Room Types</h2>
+          <div className="grid gap-5 sm:grid-cols-3">
             {config.roomTypes?.map((type) => (
-              <div key={type} className="rounded-xl border border-gray-200 p-6 text-center shadow-sm">
-                <h3 className="text-lg font-semibold text-primary">{type}</h3>
+              <div
+                key={type}
+                className="card-hover rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm"
+              >
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-secondary text-xl">
+                  🛏️
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">{type}</h3>
                 <p className="mt-2 text-sm text-gray-500">Comfortable shared living</p>
               </div>
             ))}
@@ -72,8 +88,9 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-        <p>{config.phone} · {config.email}</p>
+      <footer className="border-t border-gray-200 bg-slate-50 px-4 py-10 text-center text-sm text-gray-500">
+        <p className="font-medium text-gray-600">{config.name}</p>
+        <p className="mt-2">{config.phone} · {config.email}</p>
         <p className="mt-1">Rent due on the {config.rentDueDate}th of every month</p>
       </footer>
     </div>

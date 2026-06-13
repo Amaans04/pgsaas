@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ThemeProvider from './components/ThemeProvider';
+import { CleaningNotificationProvider } from './context/CleaningNotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
 import AdminRoute from './components/AdminRoute';
@@ -49,6 +50,7 @@ export default function App() {
         path="/:pgId/*"
         element={
           <ThemeProvider>
+            <CleaningNotificationProvider>
             <Routes>
               <Route index element={<Landing />} />
               <Route path="login" element={<GuestRoute><Login /></GuestRoute>} />
@@ -81,6 +83,7 @@ export default function App() {
               <Route path="staff/dashboard" element={roleRoute(<StaffDashboard />, 'staff')} />
               <Route path="staff/complaints" element={roleRoute(<StaffComplaints />, 'staff')} />
             </Routes>
+            </CleaningNotificationProvider>
           </ThemeProvider>
         }
       />

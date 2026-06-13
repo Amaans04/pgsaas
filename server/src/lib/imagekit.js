@@ -5,8 +5,9 @@ let instance = null;
 function getImageKitConfig() {
   const publicKey =
     process.env.IMAGEKIT_PUBLIC_KEY?.trim() || process.env.VITE_IMAGEKIT_PUBLIC_KEY?.trim();
-  const privateKey =
-    process.env.IMAGEKIT_PRIVATE_KEY?.trim() || process.env.VITE_IMAGEKIT_PRIVATE_KEY?.trim();
+  // Private key is server-only. Never read it from a VITE_-prefixed var: Vite
+  // inlines anything VITE_* into the public client bundle, which would leak it.
+  const privateKey = process.env.IMAGEKIT_PRIVATE_KEY?.trim();
   const urlEndpoint =
     process.env.IMAGEKIT_URL_ENDPOINT?.trim() || process.env.VITE_IMAGEKIT_URL_ENDPOINT?.trim();
 

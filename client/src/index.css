@@ -2,15 +2,113 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    margin: 0;
+    font-family: var(--font-family);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Tighter tracking on headings reads more polished/modern */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Buttons & links currently had no keyboard-focus indicator — add a branded one */
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  /* Smoother hover/active feedback everywhere without per-component churn */
+  a,
+  button {
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease,
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  ::selection {
+    background: var(--secondary);
+    color: var(--primary);
+  }
+}
+
+@layer components {
+  /* Soft, theme-aware brand backdrop — derives from the PG's --secondary color */
+  .bg-brand-soft {
+    background-color: #f8fafc;
+    background-image:
+      radial-gradient(40rem 40rem at 110% -10%, var(--secondary) 0%, transparent 55%),
+      radial-gradient(36rem 36rem at -10% 110%, var(--secondary) 0%, transparent 50%);
+  }
+
+  /* Lift-on-hover for clickable cards */
+  .card-hover {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 36px -18px rgb(15 23 42 / 0.25);
+  }
+
+  /* Subtle lift for the main call-to-action buttons */
+  .btn-lift:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+  .btn-lift:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .animate-slide-in {
+    animation: slide-in 0.35s ease-out;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.5s ease-out both;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 :root {
   --primary: #4f46e5;
   --secondary: #e0e7ff;
   --font-family: 'Inter', system-ui, sans-serif;
-}
-
-body {
-  margin: 0;
-  font-family: var(--font-family);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
