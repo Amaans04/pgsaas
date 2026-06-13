@@ -1,0 +1,22 @@
+{
+  "name": "pgplatform-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "dev:fresh": "rm -rf .next && next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "seed:sample-pg": "node scripts/seed-sample-pg.js",
+    "seed:owner": "node scripts/seed-owner.js",
+    "seed:dummy-tenants": "node scripts/seed-dummy-tenants.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "imagekit": "^6.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "next": "^14.2.18",
+    "pdf-lib": "^1.17.1",
+    "razorpay": "^2.9.4"
+  }
+}

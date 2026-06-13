@@ -1,0 +1,28 @@
+{
+  "pgId": "sample-pg",
+  "name": "Sample PG",
+  "tagline": "Your home away from home",
+  "logo": "/assets/sample-pg/logo.png",
+  "primaryColor": "#4F46E5",
+  "secondaryColor": "#E0E7FF",
+  "font": "Inter",
+  "address": "123, Koramangala, Bengaluru",
+  "phone": "+91 98765 43210",
+  "email": "owner@samplepg.com",
+  "amenities": ["WiFi", "Laundry", "Hot Water", "CCTV"],
+  "roomTypes": ["Single", "Double", "Triple"],
+  "rentDueDate": 5,
+  "currency": "INR",
+  "razorpayKey": "rzp_test_xxxx",
+  "features": {
+    "complaints": true,
+    "cleaning": true,
+    "addressImport": true,
+    "whatsappReminders": true
+  },
+  "marketing": {
+    "heroImage": "/assets/sample-pg/hero.jpg",
+    "gallery": [],
+    "testimonials": []
+  }
+}
