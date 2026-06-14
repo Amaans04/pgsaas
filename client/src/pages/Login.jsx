@@ -3,7 +3,6 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   signInWithEmailAndPassword,
   sendEmailVerification,
-  sendPasswordResetEmail,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
@@ -20,10 +19,11 @@ import {
   validatePhone,
 } from '../lib/passwordPolicy';
 import { isEmailNotVerifiedError, mapFirebaseAuthError, mapSessionError } from '../lib/authErrors';
+import { getPasswordResetErrorMessage, requestPasswordReset } from '../lib/passwordReset';
 
 async function completeSignIn(refreshProfile, pgId, navigate) {
   try {
-    const profile = await refreshProfile();
+    const profile = await refreshProfile({ force: true });
     navigate(getAuthHomePath(profile, pgId));
   } catch (sessionErr) {
     throw mapSessionError(sessionErr);
@@ -70,8 +70,8 @@ export default function Login() {
     let cancelled = false;
     (async () => {
       try {
-        const user = await finishGoogleRedirectSignIn();
-        if (!user || cancelled) return;
+        const redirect = await finishGoogleRedirectSignIn('tenant');
+        if (!redirect?.user || cancelled) return;
         setLoading(true);
         await completeSignIn(refreshProfile, pgId, navigate);
       } catch (err) {
@@ -185,10 +185,13 @@ export default function Login() {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, signInForm.email.trim().toLowerCase());
-      setInfo('If an account exists for that email, a password reset link has been sent.');
-    } catch {
-      setInfo('If an account exists for that email, a password reset link has been sent.');
+      setLoading(true);
+      const result = await requestPasswordReset(auth, signInForm.email, pgId, { loginPath: 'login' });
+      setInfo(result.message);
+    } catch (err) {
+      setError(getPasswordResetErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -279,7 +282,8 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="text-xs font-medium text-primary hover:underline"
+                    disabled={loading}
+                    className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
                   >
                     Forgot password?
                   </button>

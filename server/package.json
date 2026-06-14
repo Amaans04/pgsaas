@@ -9,7 +9,8 @@
     "start": "next start -p 3001",
     "seed:sample-pg": "node scripts/seed-sample-pg.js",
     "seed:owner": "node scripts/seed-owner.js",
-    "seed:dummy-tenants": "node scripts/seed-dummy-tenants.js"
+    "seed:dummy-tenants": "node scripts/seed-dummy-tenants.js",
+    "reset:pg-data": "node scripts/reset-pg-data.js"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   signInWithEmailAndPassword,
-  sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
@@ -13,6 +12,7 @@ import { usePGConfig } from '../../hooks/usePGConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { validateEmail } from '../../lib/passwordPolicy';
 import { isEmailNotVerifiedError, mapFirebaseAuthError } from '../../lib/authErrors';
+import { getPasswordResetErrorMessage, requestPasswordReset } from '../../lib/passwordReset';
 
 export default function AdminLogin() {
   const { config } = usePGConfig();
@@ -36,15 +36,16 @@ export default function AdminLogin() {
       return;
     }
 
-    const profile = await refreshProfile();
+    const profile = await refreshProfile({ force: true });
 
     if (profile?.isAdmin) {
       navigate(`/${pgId}/owner/dashboard`);
-    } else {
-      await endSession();
-      await signOut(auth);
-      setError('This account is not authorized for admin access');
+      return;
     }
+
+    await endSession();
+    await signOut(auth);
+    setError('This account is not authorized for admin access');
   }, [navigate, pgId, refreshProfile]);
 
   const handleGoogleSignIn = async () => {
@@ -53,7 +54,7 @@ export default function AdminLogin() {
       setError('');
       setInfo('');
 
-      const user = await startGoogleSignIn();
+      const user = await startGoogleSignIn('admin');
       if (!user) return;
       await completeAdminSignIn();
     } catch (err) {
@@ -114,10 +115,15 @@ export default function AdminLogin() {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, signInForm.email.trim().toLowerCase());
-      setInfo('If an account exists for that email, a password reset link has been sent.');
-    } catch {
-      setInfo('If an account exists for that email, a password reset link has been sent.');
+      setLoading(true);
+      const result = await requestPasswordReset(auth, signInForm.email, pgId, {
+        loginPath: 'admin/login',
+      });
+      setInfo(result.message);
+    } catch (err) {
+      setError(getPasswordResetErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -125,15 +131,16 @@ export default function AdminLogin() {
     let cancelled = false;
     (async () => {
       try {
-        const user = await finishGoogleRedirectSignIn();
-        if (!user || cancelled) return;
+        const redirect = await finishGoogleRedirectSignIn('admin');
+        if (!redirect?.user || cancelled) return;
         setLoading(true);
         await completeAdminSignIn();
       } catch (err) {
         if (cancelled) return;
         await endSession();
         await signOut(auth).catch(() => {});
-        setError(err.response?.data?.error || mapFirebaseAuthError(err));
+        const msg = err.response?.data?.error || err.message || '';
+        setError(msg || mapFirebaseAuthError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -184,7 +191,8 @@ export default function AdminLogin() {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-xs font-medium text-primary hover:underline"
+                  disabled={loading}
+                  className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
                 >
                   Forgot password?
                 </button>

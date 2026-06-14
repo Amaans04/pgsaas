@@ -13,8 +13,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const profileFetchRef = useRef(null);
+  const profileFetchGen = useRef(0);
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async ({ force = false } = {}) => {
+    if (force) {
+      profileFetchRef.current = null;
+      profileFetchGen.current += 1;
+    }
+
+    const generation = profileFetchGen.current;
+
     if (profileFetchRef.current) {
       return profileFetchRef.current;
     }
@@ -23,6 +31,9 @@ export function AuthProvider({ children }) {
       try {
         await establishSession();
         const { data } = await api.get('/api/auth/me');
+        if (generation !== profileFetchGen.current) {
+          return null;
+        }
         if (data.success) {
           setProfile(data.data);
           return data.data;
@@ -30,10 +41,14 @@ export function AuthProvider({ children }) {
         setProfile(null);
         return null;
       } catch {
-        setProfile(null);
+        if (generation === profileFetchGen.current) {
+          setProfile(null);
+        }
         return null;
       } finally {
-        profileFetchRef.current = null;
+        if (generation === profileFetchGen.current) {
+          profileFetchRef.current = null;
+        }
       }
     })();
 
@@ -64,8 +79,8 @@ export function AuthProvider({ children }) {
     setProfile(null);
   };
 
-  const refreshProfile = async () => {
-    return fetchProfile();
+  const refreshProfile = async (options) => {
+    return fetchProfile(options);
   };
 
   const value = {
