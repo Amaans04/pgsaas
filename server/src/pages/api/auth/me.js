@@ -2,7 +2,7 @@ import { handleCors } from '../../../lib/cors';
 import { success, error } from '../../../lib/apiResponse';
 import { verifyAuth } from '../../../middleware/verifyAuth';
 import { getFirestore } from '../../../lib/firebaseAdmin';
-import { isAdminEmail } from '../../../config/admins';
+import { isAdminEmail, isWhitelistedAdminEmail } from '../../../config/admins';
 
 export default async function handler(req, res) {
   try {
@@ -53,13 +53,17 @@ export default async function handler(req, res) {
     }
 
     const email = (decoded.email || userData.email || '').toLowerCase();
+    const isOwner = userData.role === 'owner';
+    const isAdmin =
+      isOwner &&
+      (isAdminEmail(email, userData.pgId) || isWhitelistedAdminEmail(email));
 
     return success(res, {
       uid,
       ...userData,
       email,
       onboarded: true,
-      isAdmin: userData.role === 'owner' && isAdminEmail(email, userData.pgId),
+      isAdmin,
       pg: pgData,
       tenant: tenantData,
     });

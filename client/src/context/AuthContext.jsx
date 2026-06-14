@@ -4,6 +4,7 @@ import { auth } from '../lib/firebase';
 import api from '../lib/api';
 import { establishSession, endSession } from '../lib/authSession';
 import { clearAccessToken } from '../lib/tokenStorage';
+import { resolveGoogleRedirectOnBoot } from '../lib/googleAuth';
 
 export const AuthContext = createContext(null);
 
@@ -56,20 +57,32 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
+    let unsubscribe;
+    let cancelled = false;
 
-      if (firebaseUser) {
-        await fetchProfile();
-      } else {
-        clearAccessToken();
-        setProfile(null);
-      }
+    (async () => {
+      await resolveGoogleRedirectOnBoot();
 
-      setLoading(false);
-    });
+      if (cancelled) return;
 
-    return unsubscribe;
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        setUser(firebaseUser);
+
+        if (firebaseUser) {
+          await fetchProfile();
+        } else {
+          clearAccessToken();
+          setProfile(null);
+        }
+
+        setLoading(false);
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, [fetchProfile]);
 
   const signOut = async () => {
@@ -83,6 +96,10 @@ export function AuthProvider({ children }) {
     return fetchProfile(options);
   };
 
+  const patchProfile = useCallback((patch) => {
+    setProfile((prev) => (prev ? { ...prev, ...patch } : { ...patch }));
+  }, []);
+
   const value = {
     user,
     profile,
@@ -91,6 +108,7 @@ export function AuthProvider({ children }) {
     loading,
     signOut,
     refreshProfile,
+    patchProfile,
     isAuthenticated: !!user,
     isOnboarded: profile?.onboarded === true || Boolean(profile?.role),
   };

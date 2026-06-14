@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   signInWithEmailAndPassword,
@@ -7,7 +7,12 @@ import {
 import { auth } from '../../lib/firebase';
 import api from '../../lib/api';
 import { establishSession, endSession } from '../../lib/authSession';
-import { startGoogleSignIn, finishGoogleRedirectSignIn } from '../../lib/googleAuth';
+import {
+  startGoogleSignIn,
+  finishGoogleRedirectSignIn,
+  peekAuthIntent,
+  clearPendingAuthIntent,
+} from '../../lib/googleAuth';
 import { usePGConfig } from '../../hooks/usePGConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { validateEmail } from '../../lib/passwordPolicy';
@@ -18,11 +23,12 @@ export default function AdminLogin() {
   const { config } = usePGConfig();
   const { pgId } = useParams();
   const navigate = useNavigate();
-  const { refreshProfile } = useAuth();
+  const { user, loading: authLoading, refreshProfile, patchProfile } = useAuth();
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [signInForm, setSignInForm] = useState({ email: '', password: '' });
+  const redirectHandledRef = useRef(false);
 
   const completeAdminSignIn = useCallback(async () => {
     await establishSession();
@@ -33,20 +39,20 @@ export default function AdminLogin() {
       await endSession();
       await signOut(auth);
       setError(data.error || 'Admin access denied');
-      return;
+      return false;
     }
 
-    const profile = await refreshProfile({ force: true });
+    patchProfile({
+      role: 'owner',
+      pgId,
+      isAdmin: true,
+      onboarded: true,
+    });
 
-    if (profile?.isAdmin) {
-      navigate(`/${pgId}/owner/dashboard`);
-      return;
-    }
-
-    await endSession();
-    await signOut(auth);
-    setError('This account is not authorized for admin access');
-  }, [navigate, pgId, refreshProfile]);
+    await refreshProfile({ force: true });
+    navigate(`/${pgId}/owner/dashboard`, { replace: true });
+    return true;
+  }, [navigate, patchProfile, pgId, refreshProfile]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -54,8 +60,8 @@ export default function AdminLogin() {
       setError('');
       setInfo('');
 
-      const user = await startGoogleSignIn('admin');
-      if (!user) return;
+      const signedInUser = await startGoogleSignIn('admin');
+      if (!signedInUser) return;
       await completeAdminSignIn();
     } catch (err) {
       await endSession();
@@ -65,7 +71,7 @@ export default function AdminLogin() {
           'Google Sign-In is not enabled in Firebase yet. Enable it in Firebase Console → Authentication → Sign-in method.'
         );
       } else {
-        setError(err.response?.data?.error || mapFirebaseAuthError(err));
+        setError(err.response?.data?.error || err.message || mapFirebaseAuthError(err));
       }
     } finally {
       setLoading(false);
@@ -128,15 +134,27 @@ export default function AdminLogin() {
   };
 
   useEffect(() => {
+    if (authLoading || redirectHandledRef.current) return;
+
     let cancelled = false;
+
     (async () => {
       try {
         const redirect = await finishGoogleRedirectSignIn('admin');
-        if (!redirect?.user || cancelled) return;
+        const pendingIntent = peekAuthIntent();
+        const shouldComplete =
+          redirect?.user ||
+          (user && (pendingIntent === 'admin' || redirect?.intent === 'admin'));
+
+        if (!shouldComplete || cancelled) return;
+
+        redirectHandledRef.current = true;
+        clearPendingAuthIntent();
         setLoading(true);
         await completeAdminSignIn();
       } catch (err) {
         if (cancelled) return;
+        redirectHandledRef.current = false;
         await endSession();
         await signOut(auth).catch(() => {});
         const msg = err.response?.data?.error || err.message || '';
@@ -145,10 +163,11 @@ export default function AdminLogin() {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [completeAdminSignIn]);
+  }, [authLoading, user, completeAdminSignIn]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
