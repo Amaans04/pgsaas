@@ -3,6 +3,7 @@ import { success, error } from '../../../lib/apiResponse';
 import { verifyAuth } from '../../../middleware/verifyAuth';
 import { getFirestore } from '../../../lib/firebaseAdmin';
 import { isAdminEmail, isWhitelistedAdminEmail } from '../../../config/admins';
+import { normalizePhone } from '../../../lib/userValidation';
 
 export default async function handler(req, res) {
   try {
@@ -22,11 +23,14 @@ export default async function handler(req, res) {
       return success(res, {
         uid,
         email: decoded.email,
+        role: null,
         onboarded: false,
+        hasPhone: false,
       });
     }
 
     const userData = userDoc.data();
+    const phone = normalizePhone(userData.phone);
     let pgData = null;
 
     if (userData.pgId) {
@@ -57,13 +61,20 @@ export default async function handler(req, res) {
     const isAdmin =
       isOwner &&
       (isAdminEmail(email, userData.pgId) || isWhitelistedAdminEmail(email));
+    const needsPasswordSetup = isOwner && userData.passwordSet !== true;
+    const isStaff = userData.role === 'staff';
+    const hasPhone = phone.length >= 10;
+    const onboarded = isOwner || isStaff || hasPhone;
 
     return success(res, {
       uid,
       ...userData,
       email,
-      onboarded: true,
+      phone,
+      onboarded,
+      hasPhone,
       isAdmin,
+      needsPasswordSetup,
       pg: pgData,
       tenant: tenantData,
     });

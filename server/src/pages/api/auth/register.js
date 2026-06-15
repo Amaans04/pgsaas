@@ -9,6 +9,11 @@ import {
   validatePhone,
   validateName,
 } from '../../../lib/passwordPolicy';
+import {
+  getOwnerEmailConflict,
+  isPhoneTaken,
+  normalizePhone,
+} from '../../../lib/userValidation';
 
 function getProviderIds(userRecord) {
   return userRecord.providerData.map((provider) => provider.providerId);
@@ -28,18 +33,32 @@ function existingAccountMessage(userRecord) {
   return 'An account with this email already exists. Sign in with your email and password.';
 }
 
-async function createTenantProfile(db, uid, { name, email, phone, authProvider }) {
-  const now = new Date().toISOString();
-  await db.collection('users').doc(uid).set({
+function buildTenantDoc({ name, email, phone, authProvider }) {
+  const normalizedPhone = normalizePhone(phone);
+  return {
     role: 'tenant',
     name: String(name).trim(),
     email,
-    phone: String(phone).trim(),
+    phone: normalizedPhone,
     photoURL: null,
     pgId: null,
     authProvider,
-    createdAt: now,
-  });
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function toClientProfile(uid, doc) {
+  const phone = normalizePhone(doc.phone);
+  return {
+    uid,
+    ...doc,
+    onboarded: phone.length >= 10,
+    hasPhone: phone.length >= 10,
+  };
+}
+
+async function createTenantProfile(db, uid, doc) {
+  await db.collection('users').doc(uid).set(doc);
 }
 
 export default async function handler(req, res) {
@@ -68,9 +87,18 @@ export default async function handler(req, res) {
 
     const normalizedEmail = normalizeEmail(email);
     const trimmedName = String(name).trim();
-    const trimmedPhone = String(phone).trim();
+    const normalizedPhone = normalizePhone(phone);
     const auth = getAuth();
     const db = getFirestore();
+
+    const ownerConflict = await getOwnerEmailConflict(db, normalizedEmail);
+    if (ownerConflict) {
+      return error(res, ownerConflict, 400);
+    }
+
+    if (await isPhoneTaken(db, normalizedPhone)) {
+      return error(res, 'This phone number is already registered', 400);
+    }
 
     let existingUser = null;
     try {
@@ -95,22 +123,20 @@ export default async function handler(req, res) {
       await auth.updateUser(existingUser.uid, {
         password,
         displayName: trimmedName,
+        emailVerified: true,
       });
 
-      await createTenantProfile(db, existingUser.uid, {
+      const doc = buildTenantDoc({
         name: trimmedName,
         email: normalizedEmail,
-        phone: trimmedPhone,
+        phone: normalizedPhone,
         authProvider: hadGoogle ? 'google+password' : 'password',
       });
+      await createTenantProfile(db, existingUser.uid, doc);
 
       return success(
         res,
-        {
-          uid: existingUser.uid,
-          email: normalizedEmail,
-          requiresEmailVerification: !existingUser.emailVerified,
-        },
+        { uid: existingUser.uid, email: normalizedEmail, profile: toClientProfile(existingUser.uid, doc) },
         201
       );
     }
@@ -119,23 +145,20 @@ export default async function handler(req, res) {
       email: normalizedEmail,
       password,
       displayName: trimmedName,
-      emailVerified: false,
+      emailVerified: true,
     });
 
-    await createTenantProfile(db, userRecord.uid, {
+    const doc = buildTenantDoc({
       name: trimmedName,
       email: normalizedEmail,
-      phone: trimmedPhone,
+      phone: normalizedPhone,
       authProvider: 'password',
     });
+    await createTenantProfile(db, userRecord.uid, doc);
 
     return success(
       res,
-      {
-        uid: userRecord.uid,
-        email: normalizedEmail,
-        requiresEmailVerification: true,
-      },
+      { uid: userRecord.uid, email: normalizedEmail, profile: toClientProfile(userRecord.uid, doc) },
       201
     );
   } catch (err) {

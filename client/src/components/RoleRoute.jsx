@@ -3,9 +3,9 @@ import { useAuth } from '../hooks/useAuth';
 
 export default function RoleRoute({ allowedRole, children }) {
   const { pgId } = useParams();
-  const { role, loading, isOnboarded, isAdmin } = useAuth();
+  const { role, loading, profileLoading, profile, isOnboarded, isAdmin } = useAuth();
 
-  if (loading) {
+  if (loading || (profileLoading && !profile)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

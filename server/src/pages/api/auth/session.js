@@ -15,7 +15,10 @@ export default async function handler(req, res) {
       return error(res, 'Method not allowed', 405);
     }
 
-    rateLimit(req);
+    rateLimit(req, {
+      maxRequests: process.env.NODE_ENV === 'development' ? 120 : 30,
+      keyPrefix: 'session',
+    });
     const firebaseUser = await verifyFirebase(req);
     const tokens = createTokenPair({
       uid: firebaseUser.uid,
@@ -30,9 +33,6 @@ export default async function handler(req, res) {
     return success(res, { accessToken: tokens.accessToken, expiresIn: tokens.expiresIn });
   } catch (err) {
     console.error('session error:', err);
-    if (err.code === 'EMAIL_NOT_VERIFIED') {
-      return error(res, err.message, 403);
-    }
     return error(res, err.message || 'Internal server error', err.statusCode || 500);
   }
 }

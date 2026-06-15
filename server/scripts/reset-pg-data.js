@@ -197,8 +197,25 @@ async function resetPgData({ pgId, dryRun, confirm, deleteAuth }) {
       { merge: true }
     );
     console.log('  pgs/{pgId}: roomCount reset to 0');
+
+    if (ownerId) {
+      await db.collection('users').doc(ownerId).set(
+        {
+          role: 'owner',
+          pgId,
+          passwordSet: false,
+          phone: '',
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      console.log(`  users/${ownerId}: owner profile reset (password setup required)`);
+    }
   } else {
     console.log('  pgs/{pgId}: roomCount would reset to 0 (dry-run)');
+    if (ownerId) {
+      console.log(`  users/${ownerId}: owner profile would reset (dry-run)`);
+    }
   }
 
   if (deleteAuth && allUserIdsToRemove.size > 0) {

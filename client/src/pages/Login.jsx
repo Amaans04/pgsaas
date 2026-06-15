@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import {
-  signInWithEmailAndPassword,
-  sendEmailVerification,
-  signOut as firebaseSignOut,
-} from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import api from '../lib/api';
-import { getAuthHomePath } from '../lib/authRedirect';
+import { completeTenantSignIn } from '../lib/tenantAuth';
 import { startGoogleSignIn, finishGoogleRedirectSignIn } from '../lib/googleAuth';
+import { nameFromEmail } from '../lib/nameFromEmail';
 import { usePGConfig } from '../hooks/usePGConfig';
 import { useAuth } from '../hooks/useAuth';
 import Navbar from '../components/Navbar';
@@ -18,30 +15,19 @@ import {
   validatePassword,
   validatePhone,
 } from '../lib/passwordPolicy';
-import { isEmailNotVerifiedError, mapFirebaseAuthError, mapSessionError } from '../lib/authErrors';
+import { mapFirebaseAuthError } from '../lib/authErrors';
 import { getPasswordResetErrorMessage, requestPasswordReset } from '../lib/passwordReset';
-
-async function completeSignIn(refreshProfile, pgId, navigate) {
-  try {
-    const profile = await refreshProfile({ force: true });
-    navigate(getAuthHomePath(profile, pgId));
-  } catch (sessionErr) {
-    throw mapSessionError(sessionErr);
-  }
-}
 
 export default function Login() {
   const { config } = usePGConfig();
   const { pgId } = useParams();
   const navigate = useNavigate();
-  const { refreshProfile } = useAuth();
+  const { refreshProfile, patchProfile } = useAuth();
 
   const [mode, setMode] = useState('signin');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
-
   const [signInForm, setSignInForm] = useState({ email: '', password: '' });
   const [signUpForm, setSignUpForm] = useState({
     name: '',
@@ -58,9 +44,9 @@ export default function Login() {
       setInfo('');
       const user = await startGoogleSignIn();
       if (!user) return;
-      await completeSignIn(refreshProfile, pgId, navigate);
+      await completeTenantSignIn({ refreshProfile, patchProfile, pgId, navigate });
     } catch (err) {
-      setError(mapFirebaseAuthError(err));
+      setError(err.message || mapFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -73,9 +59,9 @@ export default function Login() {
         const redirect = await finishGoogleRedirectSignIn('tenant');
         if (!redirect?.user || cancelled) return;
         setLoading(true);
-        await completeSignIn(refreshProfile, pgId, navigate);
+        await completeTenantSignIn({ refreshProfile, patchProfile, pgId, navigate });
       } catch (err) {
-        if (!cancelled) setError(mapFirebaseAuthError(err));
+        if (!cancelled) setError(err.message || mapFirebaseAuthError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -83,7 +69,7 @@ export default function Login() {
     return () => {
       cancelled = true;
     };
-  }, [pgId, navigate, refreshProfile]);
+  }, [pgId, navigate, refreshProfile, patchProfile]);
 
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
@@ -104,14 +90,9 @@ export default function Login() {
       setLoading(true);
       const email = signInForm.email.trim().toLowerCase();
       await signInWithEmailAndPassword(auth, email, signInForm.password);
-      await completeSignIn(refreshProfile, pgId, navigate);
+      await completeTenantSignIn({ refreshProfile, patchProfile, pgId, navigate });
     } catch (err) {
-      if (err.code === 'EMAIL_NOT_VERIFIED' || isEmailNotVerifiedError(err)) {
-        setPendingVerificationEmail(signInForm.email.trim().toLowerCase());
-        setError(err.message || 'Verify your email before signing in. Check your inbox for the verification link.');
-      } else {
-        setError(mapFirebaseAuthError(err));
-      }
+      setError(err.message || mapFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -153,24 +134,16 @@ export default function Login() {
       }
 
       await signInWithEmailAndPassword(auth, email, signUpForm.password);
-
-      if (auth.currentUser && !auth.currentUser.emailVerified) {
-        await sendEmailVerification(auth.currentUser);
-      }
-
-      await firebaseSignOut(auth);
-
-      setPendingVerificationEmail(email);
-      setInfo(
-        data.data?.requiresEmailVerification === false
-          ? 'Account ready. Sign in with your email and password.'
-          : 'Account created. We sent a verification link to your email — verify it, then sign in.'
-      );
-      setMode('signin');
-      setSignInForm({ email, password: '' });
+      await completeTenantSignIn({
+        refreshProfile,
+        patchProfile,
+        pgId,
+        navigate,
+        registerProfile: data.data?.profile || null,
+      });
       setSignUpForm({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
     } catch (err) {
-      setError(err.response?.data?.error || mapFirebaseAuthError(err));
+      setError(err.response?.data?.error || err.message || mapFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -190,22 +163,6 @@ export default function Login() {
       setInfo(result.message);
     } catch (err) {
       setError(getPasswordResetErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!auth.currentUser) {
-      setError('Sign in once with your email and password, then click resend.');
-      return;
-    }
-    try {
-      setLoading(true);
-      await sendEmailVerification(auth.currentUser);
-      setInfo(`Verification email sent to ${auth.currentUser.email}`);
-    } catch (err) {
-      setError(mapFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -247,20 +204,6 @@ export default function Login() {
           )}
           {info && (
             <div className="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">{info}</div>
-          )}
-
-          {pendingVerificationEmail && (
-            <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-              <p>Waiting for verification: <strong>{pendingVerificationEmail}</strong></p>
-              <button
-                type="button"
-                onClick={handleResendVerification}
-                disabled={loading}
-                className="mt-2 font-medium text-primary hover:underline disabled:opacity-50"
-              >
-                Resend verification email
-              </button>
-            </div>
           )}
 
           {mode === 'signin' ? (
@@ -325,7 +268,14 @@ export default function Login() {
                   autoComplete="email"
                   required
                   value={signUpForm.email}
-                  onChange={(e) => setSignUpForm({ ...signUpForm, email: e.target.value })}
+                  onChange={(e) => {
+                    const email = e.target.value;
+                    setSignUpForm((prev) => ({
+                      ...prev,
+                      email,
+                      name: prev.name.trim() ? prev.name : nameFromEmail(email),
+                    }));
+                  }}
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -399,7 +349,10 @@ export default function Login() {
           </button>
 
           <p className="mt-6 text-center text-xs text-gray-400">
-            Staff?{' '}
+            <Link to={`/${pgId}/admin/login`} className="text-primary hover:underline">
+              Owner login
+            </Link>
+            {' · '}
             <Link to={`/${pgId}/staff/login`} className="text-primary hover:underline">
               Staff login
             </Link>

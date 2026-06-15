@@ -92,7 +92,11 @@ export default function StaffLogin() {
 
           <p className="mt-6 text-center text-xs text-gray-400">
             <Link to={`/${pgId}/login`} className="hover:text-gray-600">
-              ← Back to tenant login
+              Tenant login
+            </Link>
+            {' · '}
+            <Link to={`/${pgId}/admin/login`} className="hover:text-gray-600">
+              Owner login
             </Link>
           </p>
         </div>

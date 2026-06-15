@@ -16,7 +16,7 @@ import {
 import { usePGConfig } from '../../hooks/usePGConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { validateEmail } from '../../lib/passwordPolicy';
-import { isEmailNotVerifiedError, mapFirebaseAuthError } from '../../lib/authErrors';
+import { mapFirebaseAuthError } from '../../lib/authErrors';
 import { getPasswordResetErrorMessage, requestPasswordReset } from '../../lib/passwordReset';
 
 export default function AdminLogin() {
@@ -47,10 +47,16 @@ export default function AdminLogin() {
       pgId,
       isAdmin: true,
       onboarded: true,
+      needsPasswordSetup: data.data?.needsPasswordSetup === true,
     });
 
     await refreshProfile({ force: true });
-    navigate(`/${pgId}/owner/dashboard`, { replace: true });
+
+    if (data.data?.needsPasswordSetup) {
+      navigate(`/${pgId}/owner/setup`, { replace: true });
+    } else {
+      navigate(`/${pgId}/owner/dashboard`, { replace: true });
+    }
     return true;
   }, [navigate, patchProfile, pgId, refreshProfile]);
 
@@ -102,11 +108,7 @@ export default function AdminLogin() {
       await endSession();
       await signOut(auth).catch(() => {});
       const msg = err.response?.data?.error || err.message || '';
-      if (isEmailNotVerifiedError(err) || msg.toLowerCase().includes('verify your email')) {
-        setError(msg || 'Verify your email before signing in.');
-      } else {
-        setError(msg || mapFirebaseAuthError(err));
-      }
+      setError(msg || mapFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }

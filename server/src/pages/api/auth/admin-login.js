@@ -5,6 +5,7 @@ import { verifyAuth } from '../../../middleware/verifyAuth';
 import { isAdminEmail } from '../../../config/admins';
 import { getAuth, getFirestore } from '../../../lib/firebaseAdmin';
 import { rateLimit } from '../../../middleware/rateLimit';
+import { userHasPasswordProvider } from '../../../lib/userValidation';
 
 export default async function handler(req, res) {
   try {
@@ -45,14 +46,15 @@ export default async function handler(req, res) {
     }
 
     let name = decoded.name;
+    const userRecord = await getAuth().getUser(uid);
     if (!name) {
-      const userRecord = await getAuth().getUser(uid);
       name = userRecord.displayName;
     }
     if (!name) {
       return error(res, 'Name is required on your account profile', 400);
     }
 
+    const hasPassword = userHasPasswordProvider(userRecord);
     const now = new Date().toISOString();
     const batch = db.batch();
 
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
         email,
         phone: '',
         pgId: sitePgId,
+        passwordSet: hasPassword,
         createdAt: now,
       },
       { merge: true }
@@ -79,7 +82,12 @@ export default async function handler(req, res) {
 
     await batch.commit();
 
-    return success(res, { role: 'owner', pgId: sitePgId, isAdmin: true });
+    return success(res, {
+      role: 'owner',
+      pgId: sitePgId,
+      isAdmin: true,
+      needsPasswordSetup: !hasPassword,
+    });
   } catch (err) {
     console.error('admin-login error:', err);
     return error(res, err.message || 'Internal server error', err.statusCode || 500);

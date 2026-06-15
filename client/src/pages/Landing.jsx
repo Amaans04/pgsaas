@@ -7,9 +7,9 @@ import { getAuthHomePath } from '../lib/authRedirect';
 export default function Landing() {
   const { config, loading: configLoading, error } = usePGConfig();
   const { pgId } = useParams();
-  const { isAuthenticated, profile, loading: authLoading } = useAuth();
+  const { isAuthenticated, profile, loading: authLoading, profileLoading } = useAuth();
 
-  if (configLoading || authLoading) {
+  if (configLoading || authLoading || (isAuthenticated && !profile && profileLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -17,7 +17,7 @@ export default function Landing() {
     );
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && profile) {
     return <Navigate to={getAuthHomePath(profile, pgId)} replace />;
   }
 
@@ -48,9 +48,23 @@ export default function Landing() {
             to={`/${pgId}/login`}
             className="btn-lift mt-9 inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 font-semibold text-white shadow-lg hover:shadow-2xl"
           >
-            Get Started
+            Tenant Login
             <span aria-hidden="true">→</span>
           </Link>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm">
+            <Link
+              to={`/${pgId}/admin/login`}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              Owner Login
+            </Link>
+            <Link
+              to={`/${pgId}/staff/login`}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              Staff Login
+            </Link>
+          </div>
         </div>
       </section>
 

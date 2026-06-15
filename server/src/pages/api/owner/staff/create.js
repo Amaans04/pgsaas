@@ -5,6 +5,7 @@ import { verifyAuth } from '../../../../middleware/verifyAuth';
 import { requireAdmin } from '../../../../middleware/requireAdmin';
 import { getAuth, getFirestore } from '../../../../lib/firebaseAdmin';
 import { validateEmail, validateName, normalizeEmail } from '../../../../lib/passwordPolicy';
+import { getOwnerEmailConflict } from '../../../../lib/userValidation';
 
 function generateTempPassword() {
   // Cryptographically secure — crypto.randomInt avoids the predictability of Math.random().
@@ -43,6 +44,11 @@ export default async function handler(req, res) {
     const normalizedEmail = normalizeEmail(email);
     const trimmedName = String(name).trim();
     const auth = getAuth();
+
+    const ownerConflict = await getOwnerEmailConflict(db, normalizedEmail);
+    if (ownerConflict) {
+      return error(res, ownerConflict, 400);
+    }
 
     let existing = null;
     try {

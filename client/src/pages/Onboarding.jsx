@@ -3,29 +3,68 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePGConfig } from '../hooks/usePGConfig';
-import { getAuthHomePath } from '../lib/authRedirect';
+import { getAuthHomePath, isProfileOnboarded } from '../lib/authRedirect';
+import { loadProfileWithRetry } from '../lib/tenantAuth';
+import { nameFromEmail } from '../lib/nameFromEmail';
 import Navbar from '../components/Navbar';
 
 export default function Onboarding() {
   const { pgId } = useParams();
   const navigate = useNavigate();
-  const { user, profile, refreshProfile, isOnboarded, loading: authLoading } = useAuth();
+  const { user, profile, refreshProfile, patchProfile, loading: authLoading } = useAuth();
   const { config } = usePGConfig();
   const [phone, setPhone] = useState('');
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const name = displayName.trim() || user?.displayName || '';
-  const email = user?.email || '';
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && isOnboarded) {
-      navigate(getAuthHomePath(profile, pgId), { replace: true });
-    }
-  }, [authLoading, isOnboarded, profile, pgId, navigate]);
+    if (!user) return;
+    const fromProvider = user.displayName?.trim();
+    const fromEmail = nameFromEmail(user.email);
+    setDisplayName(fromProvider || fromEmail || '');
+  }, [user]);
 
-  if (authLoading || isOnboarded) {
+  useEffect(() => {
+    if (profile?.phone) {
+      setPhone(profile.phone);
+    }
+  }, [profile?.phone]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setChecking(true);
+        const latestProfile = await loadProfileWithRetry(refreshProfile);
+
+        if (cancelled) return;
+
+        if (isProfileOnboarded(latestProfile)) {
+          navigate(getAuthHomePath(latestProfile, pgId), { replace: true });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.response?.data?.error || err.message || 'Could not load your profile');
+        }
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user, pgId, navigate, refreshProfile]);
+
+  const name = displayName.trim();
+  const email = user?.email || '';
+
+  if (authLoading || checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -42,12 +81,10 @@ export default function Onboarding() {
       setLoading(true);
       setError('');
 
-      await refreshProfile();
-
       const { data } = await api.post('/api/auth/onboard', {
         role: 'tenant',
         phone,
-        name: name || undefined,
+        name,
       });
 
       if (!data.success) {
@@ -55,8 +92,12 @@ export default function Onboarding() {
         return;
       }
 
-      await refreshProfile();
-      navigate(`/${pgId}/tenant/portal`);
+      if (data.data?.profile) {
+        patchProfile(data.data.profile);
+      }
+
+      const latestProfile = (await refreshProfile({ force: true })) || data.data?.profile;
+      navigate(getAuthHomePath(latestProfile, pgId), { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Onboarding failed');
     } finally {
@@ -73,12 +114,6 @@ export default function Onboarding() {
           Join {config?.name || 'this PG'} as a tenant — add your phone so the owner can find you.
         </p>
 
-        {!name && user && (
-          <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-            Enter your full name below to continue.
-          </div>
-        )}
-
         {error && (
           <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
         )}
@@ -86,25 +121,16 @@ export default function Onboarding() {
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">Full Name</label>
-            {user?.displayName ? (
-              <>
-                <input
-                  type="text"
-                  readOnly
-                  value={name}
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-700"
-                />
-                <p className="mt-1 text-xs text-gray-400">From your sign-in provider</p>
-              </>
-            ) : (
-              <input
-                type="text"
-                required
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            )}
+            <input
+              type="text"
+              required
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Pre-filled from your email — you can edit this
+            </p>
           </div>
 
           {email && (
@@ -124,7 +150,7 @@ export default function Onboarding() {
             <input
               type="tel"
               required
-              placeholder="+91 98765 43210"
+              placeholder="9876543210"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"

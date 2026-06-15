@@ -1,27 +1,35 @@
-import { useEffect, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 export default function AdminRoute({ children }) {
   const { pgId } = useParams();
-  const { isAuthenticated, isAdmin, loading, refreshProfile } = useAuth();
-  const [retried, setRetried] = useState(false);
+  const location = useLocation();
+  const { isAuthenticated, isAdmin, needsPasswordSetup, loading, refreshProfile } = useAuth();
+  const retriedRef = useRef(false);
+  const [checkDone, setCheckDone] = useState(false);
+  const onSetupPage = location.pathname.includes('/owner/setup');
 
   useEffect(() => {
-    if (loading || !isAuthenticated || isAdmin || retried) return;
+    if (loading) return;
 
-    let cancelled = false;
-    (async () => {
-      await refreshProfile({ force: true });
-      if (!cancelled) setRetried(true);
-    })();
+    if (!isAuthenticated) {
+      setCheckDone(true);
+      return;
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, isAuthenticated, isAdmin, retried, refreshProfile]);
+    if (isAdmin) {
+      setCheckDone(true);
+      return;
+    }
 
-  if (loading || (isAuthenticated && !isAdmin && !retried)) {
+    if (retriedRef.current) return;
+
+    retriedRef.current = true;
+    refreshProfile({ force: true }).finally(() => setCheckDone(true));
+  }, [loading, isAuthenticated, isAdmin, refreshProfile]);
+
+  if (loading || (isAuthenticated && !checkDone)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -31,6 +39,10 @@ export default function AdminRoute({ children }) {
 
   if (!isAuthenticated || !isAdmin) {
     return <Navigate to={`/${pgId}/admin/login`} replace />;
+  }
+
+  if (needsPasswordSetup && !onSetupPage) {
+    return <Navigate to={`/${pgId}/owner/setup`} replace />;
   }
 
   return children;

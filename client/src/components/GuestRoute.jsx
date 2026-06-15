@@ -8,9 +8,9 @@ import { getAuthHomePath } from '../lib/authRedirect';
  */
 export default function GuestRoute({ children }) {
   const { pgId } = useParams();
-  const { isAuthenticated, profile, loading } = useAuth();
+  const { isAuthenticated, profile, loading, profileLoading } = useAuth();
 
-  if (loading) {
+  if (loading || (isAuthenticated && !profile && profileLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -18,7 +18,7 @@ export default function GuestRoute({ children }) {
     );
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && profile) {
     return <Navigate to={getAuthHomePath(profile, pgId)} replace />;
   }
 

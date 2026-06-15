@@ -3,9 +3,9 @@ import { useAuth } from '../hooks/useAuth';
 
 export default function ProtectedRoute({ children }) {
   const { pgId } = useParams();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, profileLoading, profile } = useAuth();
 
-  if (loading) {
+  if (loading || (isAuthenticated && !profile && profileLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

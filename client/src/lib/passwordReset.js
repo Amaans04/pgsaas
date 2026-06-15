@@ -7,12 +7,13 @@ const HIDE_EXISTENCE_CODES = new Set([
 ]);
 
 /**
- * After reset, Firebase redirects here. Must be listed under
- * Firebase Console → Authentication → Settings → Authorized domains.
+ * Opens our in-app reset page (Firebase appends oobCode to this URL).
+ * Domain must be listed in Firebase → Authentication → Authorized domains.
  */
 export function getPasswordResetContinueUrl(pgId, loginPath = 'login') {
   if (typeof window === 'undefined' || !pgId) return undefined;
-  return `${window.location.origin}/${pgId}/${loginPath}`;
+  const next = encodeURIComponent(loginPath);
+  return `${window.location.origin}/${pgId}/reset-password?next=${next}`;
 }
 
 export async function requestPasswordReset(auth, email, pgId, options = {}) {
@@ -21,7 +22,7 @@ export async function requestPasswordReset(auth, email, pgId, options = {}) {
   const continueUrl = getPasswordResetContinueUrl(pgId, loginPath);
 
   const actionCodeSettings = continueUrl
-    ? { url: continueUrl, handleCodeInApp: false }
+    ? { url: continueUrl, handleCodeInApp: true }
     : undefined;
 
   try {

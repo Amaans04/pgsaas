@@ -4,6 +4,11 @@ import { verifyAuth } from '../../../middleware/verifyAuth';
 import { rateLimit } from '../../../middleware/rateLimit';
 import { getAuth, getFirestore } from '../../../lib/firebaseAdmin';
 import { validatePhone, validateName } from '../../../lib/passwordPolicy';
+import {
+  getOwnerEmailConflict,
+  isPhoneTaken,
+  normalizePhone,
+} from '../../../lib/userValidation';
 
 export default async function handler(req, res) {
   try {
@@ -20,8 +25,21 @@ export default async function handler(req, res) {
     const db = getFirestore();
 
     const existingUser = await db.collection('users').doc(uid).get();
-    if (existingUser.exists) {
-      return error(res, 'User already onboarded', 400);
+    const existing = existingUser.exists ? existingUser.data() : null;
+
+    if (existing && normalizePhone(existing.phone).length >= 10) {
+      const profile = {
+        uid,
+        ...existing,
+        email: (decoded.email || existing.email || '').toLowerCase(),
+        onboarded: true,
+        hasPhone: true,
+      };
+      return success(res, {
+        role: existing.role || 'tenant',
+        status: 'already_onboarded',
+        profile,
+      });
     }
 
     const { role, phone, name: bodyName } = req.body;
@@ -35,11 +53,16 @@ export default async function handler(req, res) {
       return error(res, phoneError, 400);
     }
 
-    let name = decoded.name || bodyName;
-    let photoURL = null;
+    const normalizedPhone = normalizePhone(phone);
+    if (await isPhoneTaken(db, normalizedPhone, uid)) {
+      return error(res, 'This phone number is already registered', 400);
+    }
+
+    let name = decoded.name || bodyName || existing?.name;
+    let photoURL = existing?.photoURL || null;
     const userRecord = await getAuth().getUser(uid);
     if (!name) name = userRecord.displayName;
-    photoURL = userRecord.photoURL || null;
+    if (!photoURL) photoURL = userRecord.photoURL || null;
 
     const nameError = validateName(name);
     if (nameError) {
@@ -47,19 +70,38 @@ export default async function handler(req, res) {
     }
     name = String(name).trim();
 
-    // Tenant starts unassigned — the PG owner adds them to a room later
-    // by searching their phone number.
-    await db.collection('users').doc(uid).set({
+    const email = (decoded.email || userRecord.email || existing?.email || '').toLowerCase();
+    const ownerConflict = await getOwnerEmailConflict(db, email);
+    if (ownerConflict) {
+      return error(res, ownerConflict, 400);
+    }
+
+    await db.collection('users').doc(uid).set(
+      {
+        role: 'tenant',
+        name,
+        email,
+        phone: normalizedPhone,
+        photoURL,
+        pgId: existing?.pgId ?? null,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    const profile = {
+      uid,
       role: 'tenant',
       name,
-      email: decoded.email || userRecord.email || '',
-      phone: String(phone).trim(),
+      email,
+      phone: normalizedPhone,
       photoURL,
-      pgId: null,
-      createdAt: new Date().toISOString(),
-    });
+      pgId: existing?.pgId ?? null,
+      onboarded: true,
+      hasPhone: true,
+    };
 
-    return success(res, { role: 'tenant', status: 'unassigned' });
+    return success(res, { role: 'tenant', status: existing ? 'phone_added' : 'unassigned', profile });
   } catch (err) {
     console.error('onboard error:', err);
     return error(res, err.message || 'Internal server error', err.statusCode || 500);

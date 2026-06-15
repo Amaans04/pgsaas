@@ -10,6 +10,8 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import AdminLogin from './pages/admin/Login';
 import Onboarding from './pages/Onboarding';
+import ResetPassword from './pages/ResetPassword';
+import OwnerSetup from './pages/owner/Setup';
 
 import OwnerDashboard from './pages/owner/Dashboard';
 import OwnerRooms from './pages/owner/Rooms';
@@ -54,6 +56,7 @@ export default function App() {
             <Routes>
               <Route index element={<Landing />} />
               <Route path="login" element={<GuestRoute><Login /></GuestRoute>} />
+              <Route path="reset-password" element={<ResetPassword />} />
               <Route path="admin/login" element={<AdminLogin />} />
               <Route path="staff/login" element={<StaffLogin />} />
               <Route
@@ -66,6 +69,14 @@ export default function App() {
               />
 
               <Route path="owner/dashboard" element={ownerRoute(<OwnerDashboard />)} />
+              <Route
+                path="owner/setup"
+                element={
+                  <ProtectedRoute>
+                    <OwnerSetup />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="owner/rooms" element={ownerRoute(<OwnerRooms />)} />
               <Route path="owner/tenants" element={ownerRoute(<OwnerTenants />)} />
               <Route path="owner/add-tenant" element={ownerRoute(<AddTenant />)} />
