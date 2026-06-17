@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import ThemeProvider from './components/ThemeProvider';
 import { CleaningNotificationProvider } from './context/CleaningNotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -46,6 +47,8 @@ function roleRoute(element, role) {
 
 export default function App() {
   return (
+    <>
+    <PWAInstallPrompt />
     <Routes>
       <Route path="/" element={<Navigate to="/sample-pg" replace />} />
       <Route
@@ -99,5 +102,6 @@ export default function App() {
         }
       />
     </Routes>
+    </>
   );
 }

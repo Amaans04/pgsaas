@@ -4,7 +4,7 @@ import { verifyFirebase } from '../../../middleware/verifyFirebase';
 import { verifyAuth } from '../../../middleware/verifyAuth';
 import { isAdminEmail } from '../../../config/admins';
 import { getAuth, getFirestore } from '../../../lib/firebaseAdmin';
-import { rateLimit } from '../../../middleware/rateLimit';
+import { rateLimit, RATE_LIMITS } from '../../../middleware/rateLimit';
 import { userHasPasswordProvider } from '../../../lib/userValidation';
 
 export default async function handler(req, res) {
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
       return error(res, 'Method not allowed', 405);
     }
 
-    rateLimit(req);
+    rateLimit(req, RATE_LIMITS.auth);
 
     // Accept JWT (after establishSession) or Firebase ID token from Authorization header
     let decoded;

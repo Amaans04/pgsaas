@@ -1,6 +1,6 @@
 import { handleCors } from '../../../lib/cors';
 import { success, error } from '../../../lib/apiResponse';
-import { rateLimit } from '../../../middleware/rateLimit';
+import { rateLimit, RATE_LIMITS } from '../../../middleware/rateLimit';
 import { getAuth, getFirestore } from '../../../lib/firebaseAdmin';
 import {
   normalizeEmail,
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
       return error(res, 'Method not allowed', 405);
     }
 
-    rateLimit(req, { maxRequests: 5, keyPrefix: 'register' });
+    rateLimit(req, RATE_LIMITS.register);
 
     const { name, email, password, phone } = req.body;
 

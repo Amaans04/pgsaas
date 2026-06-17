@@ -1,7 +1,7 @@
 import { handleCors } from '../../../lib/cors';
 import { success, error } from '../../../lib/apiResponse';
 import { verifyAuth } from '../../../middleware/verifyAuth';
-import { rateLimit } from '../../../middleware/rateLimit';
+import { rateLimit, RATE_LIMITS } from '../../../middleware/rateLimit';
 import { getAuth, getFirestore } from '../../../lib/firebaseAdmin';
 import { validatePhone, validateName } from '../../../lib/passwordPolicy';
 import {
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return error(res, 'Method not allowed', 405);
     }
 
-    rateLimit(req);
+    rateLimit(req, RATE_LIMITS.auth);
 
     const decoded = await verifyAuth(req);
     const uid = decoded.uid;

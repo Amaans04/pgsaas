@@ -1,0 +1,81 @@
+# .cursorrules
+# Add this file to the root of your Flutter project (mobile-flutter/)
+
+You are an expert Flutter developer building a production-grade cross-platform mobile app for Android and iOS.
+
+## Stack & Environment
+- Flutter stable channel, Dart 3.x
+- State management: Riverpod (preferred) — use ConsumerWidget, AsyncNotifier, StateNotifier patterns
+- Navigation: go_router
+- Dependency injection: Riverpod providers only, no get_it unless specified
+- HTTP: dio with interceptors
+- Local storage: shared_preferences for simple KV, hive for structured local data
+- Backend: Firebase (Firestore, Auth, Storage) unless told otherwise
+
+## Architecture
+- Follow feature-first folder structure:
+  lib/
+  ├── core/           # theme, constants, utils, errors, network
+  ├── features/
+  │   └── feature_name/
+  │       ├── data/       # models, repositories, data sources
+  │       ├── domain/     # entities, use cases, repo interfaces
+  │       └── presentation/ # screens, widgets, providers
+  └── main.dart
+- Never put business logic inside widgets
+- All API calls go through repository classes, never directly in UI
+- Models must have fromJson/toJson, copyWith
+- Separate widgets into reusable components in a widgets/ subfolder
+
+## Dart Code Rules
+- Always use const constructors where possible
+- Use named parameters for all custom widgets
+- Never use dynamic types — always type explicitly
+- Use sealed classes / freezed for state modeling
+- Handle all nullable types explicitly, no ! operator unless absolutely justified with a comment
+- Prefer async/await over .then() chains
+- Use Result<T> or Either<Failure, T> pattern for error handling
+
+## Flutter UI Rules
+- Use LayoutBuilder and MediaQuery for responsive layouts — never hardcode pixel values
+- Use SafeArea on all top-level screens
+- Theme everything through ThemeData — no hardcoded colors or font sizes anywhere in widgets
+- Use flutter_screenutil for font/size scaling across devices
+- Avoid deeply nested widget trees — extract into methods or separate widget classes above 3 levels deep
+
+## Cross-platform (Android + iOS) Rules
+- Always test logic for both platforms mentally — never assume Android-only behavior
+- For platform-specific code use Platform.isAndroid / Platform.isIOS checks or method channels
+- Permissions: use permission_handler package, always handle denied/permanently denied states
+- For camera, file picker, notifications — always implement both Android and iOS permission flows
+- pubspec.yaml: always add both android and ios permission keys when using native features
+- Gradle: target SDK 34+, minSdk 21
+- iOS: deployment target iOS 13.0+
+
+## Packages — Prefer These
+- State: flutter_riverpod, riverpod_annotation
+- Navigation: go_router
+- Networking: dio
+- Serialization: json_serializable, freezed
+- Storage: hive_flutter, shared_preferences
+- Auth: firebase_auth, google_sign_in
+- DB: cloud_firestore
+- Images: cached_network_image
+- Permissions: permission_handler
+- Env vars: flutter_dotenv
+- UI utilities: flutter_screenutil, gap
+- Charts: fl_chart
+- PDF: printing, pdf
+
+## Code Generation
+- Always add the required build_runner annotations when using freezed or json_serializable
+- Remind to run: flutter pub run build_runner build --delete-conflicting-outputs
+
+## What NOT to do
+- Don't use GetX for anything
+- Don't use setState in complex screens — use Riverpod
+- Don't put API keys in source code
+- Don't hardcode strings visible to users — use a constants file
+- Don't generate placeholder/TODO logic and leave it — always implement or explicitly mark with // TODO: [reason]
+- Don't use deprecated Flutter APIs — check Flutter 3.x compatibility
+- Don't nest Scaffold inside Scaffold

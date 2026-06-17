@@ -2,7 +2,7 @@ import { handleCors } from '../../../lib/cors';
 import { success, error } from '../../../lib/apiResponse';
 import { verifyAuth } from '../../../middleware/verifyAuth';
 import { requireRole } from '../../../middleware/requireRole';
-import { rateLimit } from '../../../middleware/rateLimit';
+import { rateLimit, RATE_LIMITS } from '../../../middleware/rateLimit';
 import { getFirestore } from '../../../lib/firebaseAdmin';
 import { isDevPaymentsEnabled } from '../../../lib/razorpay';
 
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return error(res, 'Dev payments are only available in local development without Razorpay keys', 403);
     }
 
-    rateLimit(req);
+    rateLimit(req, RATE_LIMITS.sensitive);
     const decoded = await verifyAuth(req);
     const user = await requireRole(decoded.uid, ['tenant']);
     const db = getFirestore();

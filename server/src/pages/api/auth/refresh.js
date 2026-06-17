@@ -6,7 +6,7 @@ import {
   createRefreshToken,
   REFRESH_EXPIRY_SECONDS,
 } from '../../../lib/jwt';
-import { rateLimit } from '../../../middleware/rateLimit';
+import { rateLimit, RATE_LIMITS } from '../../../middleware/rateLimit';
 import { getFirestore } from '../../../lib/firebaseAdmin';
 import { getRefreshCookie, setRefreshCookie, clearRefreshCookie } from '../../../lib/cookies';
 import { isRefreshTokenActive, revokeRefreshToken, revokeAllForUser, storeRefreshToken } from '../../../lib/refreshTokenStore';
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       return error(res, 'Method not allowed', 405);
     }
 
-    rateLimit(req);
+    rateLimit(req, RATE_LIMITS.auth);
 
     const refreshToken = getRefreshCookie(req);
     if (!refreshToken) {

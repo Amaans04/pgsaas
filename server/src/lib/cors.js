@@ -16,12 +16,15 @@ export function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
+import { guardGlobalRequest } from '../middleware/rateLimit';
+
 export function handleCors(req, res) {
   setCorsHeaders(res);
   if (req.method === 'OPTIONS') {
     res.status(204).end();
     return true;
   }
+  guardGlobalRequest(req);
   return false;
 }
 
@@ -35,6 +38,9 @@ export function withCors(handler) {
       return await handler(req, res);
     } catch (err) {
       console.error('API error:', err);
+      if (err.retryAfter) {
+        res.setHeader('Retry-After', String(err.retryAfter));
+      }
       return res.status(err.statusCode || 500).json({
         success: false,
         data: null,

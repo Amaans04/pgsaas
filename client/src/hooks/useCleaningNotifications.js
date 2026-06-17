@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../lib/api';
 
-const POLL_MS = 20000;
+const POLL_MS = 30000;
 
 export function useCleaningNotifications(enabled) {
   const [requests, setRequests] = useState([]);

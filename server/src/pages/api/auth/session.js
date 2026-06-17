@@ -2,7 +2,7 @@ import { handleCors } from '../../../lib/cors';
 import { success, error } from '../../../lib/apiResponse';
 import { verifyFirebase } from '../../../middleware/verifyFirebase';
 import { createTokenPair, REFRESH_EXPIRY_SECONDS } from '../../../lib/jwt';
-import { rateLimit } from '../../../middleware/rateLimit';
+import { rateLimit, RATE_LIMITS } from '../../../middleware/rateLimit';
 import { getFirestore } from '../../../lib/firebaseAdmin';
 import { storeRefreshToken } from '../../../lib/refreshTokenStore';
 import { setRefreshCookie } from '../../../lib/cookies';
@@ -15,10 +15,7 @@ export default async function handler(req, res) {
       return error(res, 'Method not allowed', 405);
     }
 
-    rateLimit(req, {
-      maxRequests: process.env.NODE_ENV === 'development' ? 120 : 30,
-      keyPrefix: 'session',
-    });
+    rateLimit(req, RATE_LIMITS.auth);
     const firebaseUser = await verifyFirebase(req);
     const tokens = createTokenPair({
       uid: firebaseUser.uid,

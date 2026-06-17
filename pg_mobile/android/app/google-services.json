@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "554147942686",
+    "project_id": "pg-prototype",
+    "storage_bucket": "pg-prototype.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:554147942686:android:0587bd565e28d815f3390f",
+        "android_client_info": {
+          "package_name": "PG.prototype"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "554147942686-q944qs7fdtreqnmjbonh9so1jk9jenv0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNHDbxSVs3V-hpUDl6xa_Ry9ajwqaLDZE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "554147942686-q944qs7fdtreqnmjbonh9so1jk9jenv0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

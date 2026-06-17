@@ -1,0 +1,18 @@
+{
+  "pgId": "sample-pg",
+  "name": "Sample PG",
+  "tagline": "Your home away from home",
+  "primaryColor": "#4F46E5",
+  "secondaryColor": "#E0E7FF",
+  "address": "123, Koramangala, Bengaluru",
+  "phone": "+91 98765 43210",
+  "email": "owner@samplepg.com",
+  "rentDueDate": 5,
+  "currency": "INR",
+  "features": {
+    "complaints": true,
+    "cleaning": true,
+    "addressImport": true,
+    "whatsappReminders": false
+  }
+}
