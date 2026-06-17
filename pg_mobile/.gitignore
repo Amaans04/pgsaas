@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase client config — contains OAuth client IDs (not API keys, but keep out of git)
+lib/config/firebase_secrets.dart
+lib/firebase_options.dart

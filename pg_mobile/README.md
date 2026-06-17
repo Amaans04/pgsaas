@@ -19,12 +19,26 @@ Role routing uses **`GET /api/auth/me`** only.
 
 ## Firebase
 
-`google-services.json` and `GoogleService-Info.plist` are installed for project **pg-prototype**.
+Native config files supply API keys at build time (not in Dart source):
+
+- Android: `android/app/google-services.json`
+- iOS: `ios/Runner/GoogleService-Info.plist`
+
+Google Sign-In OAuth client IDs live in a **local-only** file (gitignored):
+
+```bash
+cd pgplatform/pg_mobile
+cp lib/config/firebase_secrets.example.dart lib/config/firebase_secrets.dart
+# or auto-generate from plist/json:
+chmod +x scripts/setup_firebase_secrets.sh
+./scripts/setup_firebase_secrets.sh
+```
+
+Do **not** commit `lib/firebase_options.dart` or `lib/config/firebase_secrets.dart` — GitHub secret scanning flags embedded API keys.
 
 - Android package: `PG.prototype`
 - iOS bundle ID: `pg.prototype`
-
-Firebase initializes from `lib/firebase_options.dart` (no `--dart-define` required for Firebase keys).
+- Firebase project: **pg-prototype**
 
 ## Run (development)
 

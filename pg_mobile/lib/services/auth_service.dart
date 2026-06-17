@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
-import '../firebase_options.dart';
+import '../config/firebase_secrets.dart';
 
 class AuthService {
   AuthService({
@@ -13,9 +13,9 @@ class AuthService {
   })  : _auth = auth ?? FirebaseAuth.instance,
         _googleSignIn = googleSignIn ??
             GoogleSignIn(
-              serverClientId: DefaultFirebaseOptions.googleWebClientId,
+              serverClientId: FirebaseSecrets.googleWebClientId,
               clientId: (!kIsWeb && Platform.isIOS)
-                  ? DefaultFirebaseOptions.googleIosClientId
+                  ? FirebaseSecrets.googleIosClientId
                   : null,
             );
 
