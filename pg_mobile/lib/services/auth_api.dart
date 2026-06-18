@@ -63,4 +63,9 @@ class AuthApi {
         body: {'pushToken': pushToken},
         parser: (_) {},
       );
+
+  Future<void> deleteAccountData() => _client.deleteData<void>(
+        '/api/auth/delete-account',
+        parser: (_) {},
+      );
 }

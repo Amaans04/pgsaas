@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/constants/app_strings.dart';
+import '../../../core/permissions/permission_service.dart';
+import '../../../core/utils/error_message.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/async_state.dart';
 import '../../../models/document.dart';
@@ -22,6 +23,9 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
   bool _uploading = false;
 
   Future<void> _pickAndUpload() async {
+    final allowed = await PermissionService.requestStorageForDocuments(context);
+    if (!allowed || !mounted) return;
+
     final result = await FilePicker.platform.pickFiles(withData: false);
     if (result == null || result.files.isEmpty) return;
 
@@ -54,7 +58,7 @@ class _TenantDocumentsScreenState extends ConsumerState<TenantDocumentsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
+          SnackBar(content: Text(userFacingError(e))),
         );
       }
     } finally {

@@ -35,7 +35,7 @@ export async function loadTenantsForPg(db, pgId, { statuses = null } = {}) {
         email: userData.email || '',
         phone: userData.phone || '',
         ...tenantData,
-        roomNumber: room?.roomNumber ?? room?.houseNumber ?? null,
+        roomNumber: room?.roomNumber != null ? String(room.roomNumber) : room?.houseNumber != null ? String(room.houseNumber) : null,
         rentAmount: room?.rentAmount ?? room?.rent ?? null,
       };
     })

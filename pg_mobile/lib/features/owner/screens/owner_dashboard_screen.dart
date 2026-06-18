@@ -6,9 +6,9 @@ import 'package:intl/intl.dart';
 
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/async_state.dart';
-import '../../../models/payment.dart';
 import '../../../models/room.dart';
 import '../../../providers/app_providers.dart';
+import '../../../repositories/data_repositories.dart';
 
 class OwnerDashboardScreen extends ConsumerWidget {
   const OwnerDashboardScreen({super.key});
@@ -42,7 +42,7 @@ class OwnerDashboardScreen extends ConsumerWidget {
               final occupancyPct =
                   totalBeds > 0 ? ((occupied / totalBeds) * 100).round() : 0;
 
-              final paymentSummary = summary as PaymentSummary;
+              final paymentSummary = summary;
               final unpaidCount = paymentSummary.tenantBreakdown
                   .where((t) => t.status != 'paid')
                   .length;
@@ -55,6 +55,7 @@ class OwnerDashboardScreen extends ConsumerWidget {
                 onRefresh: () async {
                   ref.invalidate(paymentSummaryProvider);
                   ref.invalidate(roomsListProvider);
+                  await ref.read(tenantsRepositoryProvider).clearCache();
                   ref.invalidate(tenantsListProvider);
                   await ref.read(cleaningProvider.notifier).refresh();
                 },

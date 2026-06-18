@@ -87,6 +87,7 @@ class _OwnerAddTenantScreenState extends ConsumerState<OwnerAddTenantScreen> {
             userId: _selectedUser!.uid,
             roomId: _selectedRoom!.id,
           );
+      await ref.read(tenantsRepositoryProvider).clearCache();
       ref.invalidate(tenantsListProvider);
       ref.invalidate(roomsListProvider);
       if (mounted) context.pop();

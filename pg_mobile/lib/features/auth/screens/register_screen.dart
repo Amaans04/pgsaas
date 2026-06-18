@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/error_message.dart';
 import '../../../providers/app_providers.dart';
 import '../../../repositories/auth_repository.dart';
 import '../../../router/app_router.dart';
+import '../../legal/legal_screens.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +22,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
+  bool _acceptedTerms = false;
   String? _error;
 
   @override
@@ -33,6 +36,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptedTerms) {
+      setState(() => _error = 'Please accept the Terms of Service and Privacy Policy');
+      return;
+    }
 
     setState(() {
       _loading = true;
@@ -55,7 +62,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         context.go(homeRouteForProfile(profile));
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = userFacingError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -117,6 +124,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: true,
                   validator: (v) =>
                       v == null || v.length < 6 ? 'At least 6 characters' : null,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Checkbox(
+                      value: _acceptedTerms,
+                      onChanged: _loading
+                          ? null
+                          : (v) => setState(() => _acceptedTerms = v ?? false),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: LegalLinksRow(prefix: 'I agree to the '),
+                      ),
+                    ),
+                  ],
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),

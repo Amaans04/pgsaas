@@ -1,3 +1,5 @@
+import 'tenant.dart';
+
 /// JSON list helpers for API envelope data arrays.
 List<T> parseList<T>(
   Object? json,
@@ -13,4 +15,14 @@ List<T> parseList<T>(
 Map<String, dynamic> asMap(Object? json) {
   if (json is Map<String, dynamic>) return json;
   throw const FormatException('Expected JSON object');
+}
+
+/// Firestore may return numeric room numbers; model expects String.
+Tenant parseTenant(Map<String, dynamic> json) {
+  final map = Map<String, dynamic>.from(json);
+  final roomNumber = map['roomNumber'];
+  if (roomNumber != null) {
+    map['roomNumber'] = roomNumber.toString();
+  }
+  return Tenant.fromJson(map);
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/cache_provider.dart';
 import '../core/network/api_client.dart';
 import '../core/storage/cache_service.dart';
+import '../core/storage/secure_storage_service.dart';
 import '../models/user_profile.dart';
 import '../services/auth_api.dart';
 import '../services/auth_service.dart';
@@ -99,7 +100,58 @@ class AuthRepository {
 
   Future<void> signOut() async {
     await _authService.signOut();
-    await _cache.remove(_profileCacheKey);
+    await _clearLocalState();
+  }
+
+  Future<void> _clearLocalState() async {
+    await _cache.clearAll();
+    await SecureStorageService().clearAll();
+  }
+
+  bool get hasPasswordProvider => _authService.hasPasswordProvider;
+  bool get hasGoogleProvider => _authService.hasGoogleProvider;
+
+  Future<void> reauthenticateForDeletion({
+    String? email,
+    String? password,
+    bool useGoogle = false,
+  }) async {
+    if (useGoogle) {
+      await _authService.reauthenticateWithGoogle();
+      return;
+    }
+    if (email == null || password == null || password.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-password',
+        message: 'Password is required to confirm account deletion',
+      );
+    }
+    await _authService.reauthenticateWithPassword(email, password);
+  }
+
+  /// Deletes server data, Firebase Auth user, and all local cache.
+  Future<void> deleteAccount({
+    String? email,
+    String? password,
+    bool useGoogle = false,
+  }) async {
+    await _authApi.deleteAccountData();
+
+    Future<void> deleteAuthUser() => _authService.deleteCurrentUser();
+
+    try {
+      await deleteAuthUser();
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'requires-recent-login') rethrow;
+      await reauthenticateForDeletion(
+        email: email,
+        password: password,
+        useGoogle: useGoogle,
+      );
+      await deleteAuthUser();
+    }
+
+    await _clearLocalState();
   }
 
   Future<void> resetPassword(String email) => _authService.sendPasswordReset(email);

@@ -34,6 +34,8 @@ import '../features/owner/screens/owner_documents_screen.dart';
 import '../features/staff/screens/staff_dashboard_screen.dart';
 import '../features/staff/screens/staff_complaints_screen.dart';
 import '../features/staff/screens/staff_cleaning_screen.dart';
+import '../features/settings/settings_screen.dart';
+import '../features/legal/legal_screens.dart';
 import '../services/pg_config_service.dart';
 
 final pgConfigServiceProvider = Provider((ref) => PgConfigService());
@@ -55,9 +57,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         '/admin-login',
         '/staff-login',
         '/reset-password',
+        '/privacy',
+        '/terms',
       };
 
       if (path == '/splash') return null;
+
+      // Legal pages are always accessible (logged in or not).
+      if (path == '/privacy' || path == '/terms') return null;
 
       // Let login screens finish their multi-step auth flow without redirecting away.
       if (path == '/admin-login' || path == '/staff-login') return null;
@@ -99,6 +106,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         return homeRouteForProfile(profile);
       }
 
+      // Settings is available to any authenticated role.
+      if (path == '/settings') return null;
+
+      final roleRedirect = _roleGuard(profile, path);
+      if (roleRedirect != null) return roleRedirect;
+
       return null;
     },
     routes: [
@@ -131,6 +144,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/staff/dashboard', builder: (_, _) => const StaffDashboardScreen()),
       GoRoute(path: '/staff/complaints', builder: (_, _) => const StaffComplaintsScreen()),
       GoRoute(path: '/staff/cleaning', builder: (_, _) => const StaffCleaningScreen()),
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/privacy', builder: (_, _) => const PrivacyPolicyScreen()),
+      GoRoute(path: '/terms', builder: (_, _) => const TermsOfServiceScreen()),
     ],
   );
 });
@@ -155,4 +171,18 @@ String homeRouteForProfile(UserProfile profile) {
   if (profile.role == 'staff') return '/staff/dashboard';
   if (profile.role == 'tenant') return '/tenant/portal';
   return '/login';
+}
+
+/// Blocks cross-role navigation (e.g. tenant opening owner routes).
+String? _roleGuard(UserProfile profile, String path) {
+  if (path.startsWith('/owner/') && !profile.isAdmin) {
+    return homeRouteForProfile(profile);
+  }
+  if (path.startsWith('/tenant/') && profile.role != 'tenant') {
+    return homeRouteForProfile(profile);
+  }
+  if (path.startsWith('/staff/') && profile.role != 'staff') {
+    return homeRouteForProfile(profile);
+  }
+  return null;
 }

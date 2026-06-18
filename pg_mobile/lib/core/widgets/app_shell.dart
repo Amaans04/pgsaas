@@ -19,7 +19,13 @@ class AppShell extends ConsumerWidget {
         actions: [
           ...?actions,
           IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Sign out',
             onPressed: () async {
               await ref.read(authRepositoryProvider).signOut();
               if (context.mounted) context.go('/login');

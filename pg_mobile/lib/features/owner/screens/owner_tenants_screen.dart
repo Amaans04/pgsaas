@@ -27,6 +27,11 @@ class _OwnerTenantsScreenState extends ConsumerState<OwnerTenantsScreen> {
     super.dispose();
   }
 
+  Future<void> _refreshTenants() async {
+    await ref.read(tenantsRepositoryProvider).clearCache();
+    ref.invalidate(tenantsListProvider);
+  }
+
   Future<void> _giveNotice(Tenant tenant) async {
     final date = _noticeDates[tenant.uid];
     if (date == null || date.isEmpty) {
@@ -41,7 +46,7 @@ class _OwnerTenantsScreenState extends ConsumerState<OwnerTenantsScreen> {
             tenantId: tenant.uid,
             moveOutDate: date,
           );
-      ref.invalidate(tenantsListProvider);
+      await _refreshTenants();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Notice recorded')),
@@ -59,7 +64,7 @@ class _OwnerTenantsScreenState extends ConsumerState<OwnerTenantsScreen> {
   Future<void> _confirmMoveout(Tenant tenant) async {
     try {
       await ref.read(ownerTenantsApiProvider).confirmMoveout(tenant.uid);
-      ref.invalidate(tenantsListProvider);
+      await _refreshTenants();
       ref.invalidate(roomsListProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -100,7 +105,7 @@ class _OwnerTenantsScreenState extends ConsumerState<OwnerTenantsScreen> {
 
     try {
       await ref.read(ownerTenantsApiProvider).removeTenant(tenant.uid);
-      ref.invalidate(tenantsListProvider);
+      await _refreshTenants();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${tenant.name} removed')),
@@ -148,7 +153,7 @@ class _OwnerTenantsScreenState extends ConsumerState<OwnerTenantsScreen> {
               loading: () => const LoadingView(),
               error: (e, _) => ErrorView(
                 message: e.toString(),
-                onRetry: () => ref.invalidate(tenantsListProvider),
+                onRetry: _refreshTenants,
               ),
               data: (tenantsRaw) {
                 final tenants = tenantsRaw
@@ -166,7 +171,7 @@ class _OwnerTenantsScreenState extends ConsumerState<OwnerTenantsScreen> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(tenantsListProvider),
+                  onRefresh: _refreshTenants,
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: tenants.length,

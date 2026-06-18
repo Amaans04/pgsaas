@@ -7,9 +7,11 @@ abstract final class Env {
   /// Production API — override with --dart-define=API_BASE_URL=... if needed.
   static const productionApiBaseUrl = 'https://pgsaas.vercel.app';
 
-  /// Local dev server on your Mac's LAN IP (same Wi‑Fi as your phone).
-  /// Update if your machine IP changes, or pass --dart-define=API_BASE_URL=...
-  static const localDevApiBaseUrl = 'http://10.1.73.104:3001';
+  /// Local dev server — pass --dart-define=API_BASE_URL=http://YOUR_IP:3001
+  static const localDevApiBaseUrl = String.fromEnvironment(
+    'LOCAL_API_BASE_URL',
+    defaultValue: 'http://127.0.0.1:3001',
+  );
 
   static String get apiBaseUrl {
     if (_apiBaseUrlOverride.isNotEmpty) {

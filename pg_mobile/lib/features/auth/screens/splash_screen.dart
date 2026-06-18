@@ -74,7 +74,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
       ref.read(profileProvider.notifier).setProfile(profile);
       _log('profile ok (${profile.role}) — navigating home');
-      unawaited(ref.read(pushNotificationServiceProvider).initialize());
+      unawaited(ref.read(pushNotificationServiceProvider).initialize(context));
       if (!mounted) return;
       context.go(homeRouteForProfile(profile));
     } catch (e, st) {
@@ -116,7 +116,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           return;
         }
         _log('profile ok (${profile.role}) — navigating home');
-        unawaited(ref.read(pushNotificationServiceProvider).initialize());
+        unawaited(ref.read(pushNotificationServiceProvider).initialize(context));
         if (!mounted) return;
         context.go(homeRouteForProfile(profile));
       },

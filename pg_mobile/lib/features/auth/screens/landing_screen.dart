@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../legal/legal_screens.dart';
 
 class LandingScreen extends ConsumerWidget {
   const LandingScreen({super.key});
@@ -52,6 +53,8 @@ class LandingScreen extends ConsumerWidget {
                 onPressed: () => context.push('/staff-login'),
                 child: const Text('Staff login'),
               ),
+              const SizedBox(height: 16),
+              const Center(child: LegalLinksRow(prefix: '')),
               const SizedBox(height: 24),
             ],
           ),

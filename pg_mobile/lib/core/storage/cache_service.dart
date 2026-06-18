@@ -55,4 +55,10 @@ class CacheService {
   }
 
   Future<void> remove(String key) => _box.delete(key);
+
+  /// Clears all cached API data (call on logout / account deletion).
+  Future<void> clearAll() async {
+    _lastRevalidated.clear();
+    await _box.clear();
+  }
 }

@@ -8,6 +8,7 @@ import '../models/document.dart';
 import '../models/payment.dart';
 import '../models/room.dart';
 import '../models/staff.dart';
+import '../models/json_helpers.dart';
 import '../models/tenant.dart';
 import '../services/documents_api.dart';
 import '../services/owner_payments_api.dart';
@@ -61,10 +62,13 @@ class TenantsRepository {
   static const _cacheKey = 'tenants';
   static const _revalidateInterval = Duration(seconds: 60);
 
+  Future<void> clearCache() => _cache.remove(_cacheKey);
+
   Future<List<Tenant>> list({bool useCache = true}) async {
     if (useCache) {
-      final cached = _cache.getJsonList(_cacheKey, Tenant.fromJson);
-      if (cached != null) {
+      final cached = _cache.getJsonList(_cacheKey, parseTenant);
+      // Never serve a cached empty list — often stale from before owner login / first load.
+      if (cached != null && cached.isNotEmpty) {
         if (_cache.shouldRevalidate(_cacheKey, _revalidateInterval)) {
           _cache.markRevalidated(_cacheKey);
           _api.listTenants().then((fresh) {
@@ -78,6 +82,11 @@ class TenantsRepository {
     _cache.markRevalidated(_cacheKey);
     await _cache.putJsonList(_cacheKey, tenants.map((t) => t.toJson()).toList());
     return tenants;
+  }
+
+  Future<List<Tenant>> refresh() async {
+    await clearCache();
+    return list(useCache: false);
   }
 }
 

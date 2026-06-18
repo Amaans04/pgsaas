@@ -8,7 +8,7 @@ class OwnerTenantsApi {
 
   Future<List<Tenant>> listTenants() => _client.getData(
         '/api/owner/tenants',
-        parser: (json) => parseList(json, Tenant.fromJson),
+        parser: (json) => parseList(json, parseTenant),
       );
 
   Future<TenantSearchResponse> searchTenants({String? query, int? limit}) =>

@@ -1,6 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/permissions/permission_service.dart';
 import '../repositories/auth_repository.dart';
 import 'auth_api.dart';
 
@@ -10,9 +12,11 @@ class PushNotificationService {
   final FirebaseMessaging _messaging;
   final AuthApi _authApi;
 
-  Future<void> initialize() async {
+  Future<void> initialize(BuildContext context) async {
     try {
-      await _messaging.requestPermission();
+      final granted = await PermissionService.requestNotificationPermission(context);
+      if (!granted) return;
+
       final token = await _messaging.getToken();
       if (token != null) {
         await _authApi.updatePushToken(token);

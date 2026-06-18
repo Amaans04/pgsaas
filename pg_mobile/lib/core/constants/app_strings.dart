@@ -1,5 +1,5 @@
 abstract final class AppStrings {
-  static const appName = 'PG SaaS';
+  static const appName = 'Dwello';
   static const genericError = 'Something went wrong. Please try again.';
   static const networkError = 'Cannot reach the server. Check your connection.';
   static const emptyRooms = 'No rooms yet';

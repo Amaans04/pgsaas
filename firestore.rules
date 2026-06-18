@@ -1,23 +1,138 @@
 rules_version = '2';
 
 // ---------------------------------------------------------------------------
-// Firestore security rules — DEFAULT DENY.
+// Dwello Firestore Security Rules (recommended)
 //
-// Every read/write in this app goes through the Next.js API, which uses the
-// Firebase Admin SDK. The Admin SDK runs with privileged credentials and
-// BYPASSES these rules entirely, so the API keeps working.
+// The mobile app uses the Next.js API + Firebase Admin SDK for all data access.
+// Admin SDK bypasses these rules. These rules protect against direct client SDK
+// access if someone extracts the Firebase config from an APK/IPA.
 //
-// The web client only uses Firebase Authentication; it never talks to
-// Firestore directly. But the client bundle ships the public Firebase config
-// (apiKey, projectId, ...), which anyone can extract and use to hit the
-// Firestore REST/SDK endpoints. Denying all direct client access here is what
-// stops an attacker from reading/writing users, rentRecords, customPayments,
-// refreshTokens, etc. straight from the database and bypassing our API authz.
+// Deploy: firebase deploy --only firestore:rules
 //
-// Deploy with:  firebase deploy --only firestore:rules
+// For owner PG-scoped writes via client SDK, set custom claims on login:
+//   { role: 'owner'|'tenant'|'staff', pgId: '...' }
 // ---------------------------------------------------------------------------
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function userRole() {
+      return isSignedIn() ? request.auth.token.role : null;
+    }
+
+    function userPgId() {
+      return isSignedIn() ? request.auth.token.pgId : null;
+    }
+
+    function isOwner() {
+      return userRole() == 'owner';
+    }
+
+    function isTenant() {
+      return userRole() == 'tenant';
+    }
+
+    function isStaff() {
+      return userRole() == 'staff';
+    }
+
+    function samePg(pgId) {
+      return userPgId() != null && userPgId() == pgId;
+    }
+
+    // Users: each user may read/write only their own profile document.
+    match /users/{userId} {
+      allow read, write: if isSelf(userId);
+    }
+
+    // Tenants: tenant reads own record; owners read tenants in their PG.
+    match /tenants/{tenantId} {
+      allow read: if isSelf(tenantId)
+        || (isOwner() && resource.data.pgId == userPgId());
+      allow create, update: if isSelf(tenantId)
+        || (isOwner() && request.resource.data.pgId == userPgId());
+      allow delete: if isOwner() && resource.data.pgId == userPgId();
+    }
+
+    // PGs: owners read/write their own PG; tenants read assigned PG.
+    match /pgs/{pgId} {
+      allow read: if samePg(pgId)
+        || (isTenant() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.pgId == pgId);
+      allow write: if isOwner() && samePg(pgId);
+    }
+
+    // Rooms: PG-scoped for owners; tenants read rooms in their PG.
+    match /rooms/{roomId} {
+      allow read: if isOwner() && resource.data.pgId == userPgId()
+        || isTenant() && resource.data.pgId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.pgId;
+      allow write: if isOwner() && request.resource.data.pgId == userPgId();
+    }
+
+    // Documents: users manage own uploads; owners read PG tenant docs.
+    match /documents/{docId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid
+        || (isOwner() && resource.data.pgId == userPgId())
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Complaints: tenant creates own; owner/staff read PG complaints.
+    match /complaints/{complaintId} {
+      allow read: if isSignedIn() && (
+        resource.data.tenantId == request.auth.uid
+        || (isOwner() && resource.data.pgId == userPgId())
+        || (isStaff() && resource.data.pgId == userPgId())
+      );
+      allow create: if isTenant()
+        && request.resource.data.tenantId == request.auth.uid;
+      allow update: if isOwner() && resource.data.pgId == userPgId()
+        || isStaff() && resource.data.pgId == userPgId();
+      allow delete: if false;
+    }
+
+    // Rent records, payments, cleaning — API-only writes; scoped reads.
+    match /rentRecords/{recordId} {
+      allow read: if isSignedIn() && (
+        resource.data.tenantId == request.auth.uid
+        || (isOwner() && resource.data.pgId == userPgId())
+      );
+      allow write: if false;
+    }
+
+    match /customPayments/{paymentId} {
+      allow read: if isOwner() && resource.data.pgId == userPgId();
+      allow write: if false;
+    }
+
+    match /cleaningRequests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.tenantId == request.auth.uid
+        || (isOwner() && resource.data.pgId == userPgId())
+        || (isStaff() && resource.data.pgId == userPgId())
+      );
+      allow create: if isTenant()
+        && request.resource.data.tenantId == request.auth.uid;
+      allow update: if isOwner() && resource.data.pgId == userPgId()
+        || isStaff() && resource.data.pgId == userPgId();
+      allow delete: if false;
+    }
+
+    // Refresh tokens — never client-accessible.
+    match /refreshTokens/{tokenId} {
+      allow read, write: if false;
+    }
+
+    // Default deny for any collection not explicitly listed.
     match /{document=**} {
       allow read, write: if false;
     }
