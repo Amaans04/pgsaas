@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-import 'app_exception.dart';
-import 'app_strings.dart';
+import '../constants/app_strings.dart';
+import '../exceptions/app_exception.dart';
 
 /// Safe error text for SnackBars and dialogs — avoids leaking internals in release.
 String userFacingError(Object error) {

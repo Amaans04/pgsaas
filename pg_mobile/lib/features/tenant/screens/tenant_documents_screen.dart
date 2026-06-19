@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/constants/app_strings.dart';
 import '../../../core/permissions/permission_service.dart';
 import '../../../core/utils/error_message.dart';
 import '../../../core/widgets/app_shell.dart';
